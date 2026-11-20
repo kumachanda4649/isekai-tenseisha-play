@@ -1,0 +1,1253 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>異世界転生者になろう</title>
+<style>
+:root {
+  --bg: #12162b; --bg2: #181e3a; --panel: #1f2748; --panel2: #262f58; --line: #36406e;
+  --text: #efe6d2; --muted: #a8a496; --gold: #e3c27a; --blue: #7fa6e0;
+  --good: #7fc79a; --good2: #a9d98c; --warn: #e3b266; --bad: #e27f7f; --dim: .45;
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.85 system-ui, "Yu Gothic UI", "Meiryo", sans-serif; }
+button { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 14px; cursor: pointer; line-height: 1.5; }
+button:hover:not(:disabled) { border-color: var(--gold); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: #3c4f8f; border-color: #5a73c0; font-weight: 600; }
+button.gold { background: #6b5a2c; border-color: var(--gold); color: #fff4d6; font-weight: 600; }
+input[type=number] { font: inherit; color: var(--text); background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; width: 7em; }
+.px { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+
+#app { max-width: 1560px; margin: 0 auto; padding: 0 16px 40px; }
+#top { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+#top h1 { font-size: 18px; margin: 0 auto 0 0; letter-spacing: .08em; color: var(--gold); font-weight: 600; }
+#msg { flex-basis: 100%; min-height: 1.5em; color: var(--good2); font-size: 14px; }
+
+#game { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+#left { min-width: 0; } #hand { margin-top: 12px; } #side { min-width: 0; }
+@media (min-width: 1100px) {
+  #game { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: start; }
+  #hand { position: sticky; bottom: 0; z-index: 5; padding-top: 4px; background: linear-gradient(to bottom, rgba(18,22,43,0), var(--bg) 14px); }
+  #hand .box { box-shadow: 0 -6px 18px rgba(0,0,0,.45); padding: 10px 14px; }
+  #hand .gods { margin-bottom: 6px; }
+  #hand .cards { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }   /* 札は必ず横一列 */
+  #hand .card { padding: 4px 8px; min-width: 0; } #hand .card .eff, #hand .card .why { display: none; }
+  #hand .card .nm { font-size: 15px; flex-wrap: wrap; gap: 0 6px; } #hand .card .fit b { margin-right: 0; }
+  #hand .actions { margin-top: 8px; }
+  /* 遊んでいる間は、ページ全体を動かさない。場面の絵と手札は動かず、文の欄と右の欄だけが、それぞれの中でスクロールする */
+  body.playing { overflow: hidden; }
+  body.playing #app { height: 100vh; display: flex; flex-direction: column; padding-bottom: 10px; }
+  body.playing #top { flex: none; margin-bottom: 10px; padding: 8px 0; }
+  body.playing #root { flex: 1; min-height: 0; }
+  body.playing #game { height: 100%; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+  body.playing #left { display: flex; flex-direction: column; min-height: 0; }
+  body.playing #main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  body.playing #main > .box { flex: none; }
+  body.playing #main > .box:last-child { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  body.playing #main.over { display: block; overflow-y: auto; overscroll-behavior: contain; }
+  body.playing #main.over > .box:last-child { overflow: visible; }
+  body.playing #hand { position: static; flex: none; background: none; margin-top: 10px; padding-top: 0; }
+  body.playing #side { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding-right: 4px; }
+  body.playing #side .tabs { position: sticky; top: 0; z-index: 3; background: var(--bg); padding-bottom: 6px; margin-bottom: 4px; }
+}
+.box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+.box + .box { margin-top: 12px; }
+h2 { font-size: 16px; margin: 0 0 6px; color: var(--gold); font-weight: 600; }
+h3 { font-size: 15px; margin: 10px 0 4px; color: var(--blue); font-weight: 600; }
+
+/* 場面 */
+.sceneBox { padding: 0; overflow: hidden; background: #0a0d1c; text-align: center; }
+.sceneBox canvas { margin: 0 auto; }
+.evHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.evHead .t { font-size: 19px; font-weight: 600; }
+.chip { display: inline-block; font-size: 14px; line-height: 1.6; padding: 0 9px; border-radius: 99px; border: 1px solid var(--line); background: var(--bg2); color: var(--text); margin: 2px 4px 2px 0; }
+.chip.kind-crisis { border-color: var(--bad); color: #ffc9c9; } .chip.kind-calm { border-color: var(--good); color: #cdeed9; } .chip.warnc { border-color: var(--warn); color: #ffe2b0; }
+.stake { color: var(--gold); font-size: 14px; margin: 2px 0 6px; }
+.lines p { margin: 6px 0; }
+.lines p.lsay { padding-left: 10px; border-left: 3px solid #5a73c0; background: rgba(90,115,192,.10); border-radius: 0 8px 8px 0; }
+.lines p.lsay b { color: var(--blue); font-weight: 600; }
+.lines p.lc { color: var(--muted); font-size: 14px; margin: 12px 0 2px; border-top: 1px dashed var(--line); padding-top: 6px; }
+.lines p.ln { color: var(--warn); font-size: 14px; font-style: italic; }
+.lines p.ln.trigLine { color: #ffb3b3; border-left: 3px solid #a24b4b; padding-left: 8px; }
+.lines p.lt { color: var(--muted); font-size: 13px; text-align: center; margin: 14px 0 4px; letter-spacing: .15em; }
+.trigBanner { background: #3a2230; border: 1px solid #a24b4b; color: #ffd9d9; border-radius: 8px; padding: 6px 10px; margin: 6px 0; font-size: 14px; }
+.memo { color: var(--muted); font-size: 13px; }
+.lines .tags { margin: 0 0 6px; }
+.bar { height: 12px; background: var(--bg2); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; position: relative; }
+.bar i { display: block; height: 100%; border-radius: 99px; background: var(--blue); }
+.bar.chance i { background: linear-gradient(90deg, #c46a6a, #e3b266, #7fc79a); background-size: 100vw 100%; }
+.chanceRow { display: flex; align-items: center; gap: 10px; margin: 4px 0; }
+.chanceRow .bar { flex: 1; height: 14px; } .chanceRow b { min-width: 6em; font-size: 14px; }
+.cardMsg { border-left: 4px solid var(--gold); padding: 4px 12px; margin: 8px 0; background: rgba(227,194,122,.08); border-radius: 0 8px 8px 0; }
+.cardMsg.bad { border-color: var(--bad); background: rgba(226,127,127,.08); }
+.hint { color: var(--muted); font-size: 14px; }
+.outcome { display: inline-block; font-weight: 700; padding: 0 12px; border-radius: 8px; margin-right: 8px; }
+.outcome.win { background: #2e5a42; color: #d9f5e3; } .outcome.lose { background: #6a3434; color: #ffd9d9; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.tag { font-size: 14px; line-height: 1.6; padding: 1px 10px 1px 8px; border-radius: 6px; background: var(--bg2); border: 1px solid var(--line); display: inline-flex; align-items: center; gap: 6px; }
+.tag::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--muted); flex: none; }
+.tag.item::before { background: var(--gold); } .tag.skill::before { background: var(--blue); border-radius: 50%; }
+.tag.rel::before { background: #d98ac0; transform: rotate(45deg); } .tag.up::before { background: var(--good); } .tag.down::before { background: var(--bad); }
+.tag.sys::before { background: #9a8fd8; } .tag.lost { opacity: .75; } .tag.thread::before { background: #6fd0d0; border-radius: 50%; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.parts { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; font-size: 14px; margin: 0 0 6px; line-height: 1.6; }
+.part { padding: 0 8px; border-radius: 6px; background: var(--bg2); border: 1px solid var(--line); color: var(--muted); }
+.part.up { color: var(--good2); border-color: #4f9d70; } .part.down { color: #ff9a9a; border-color: #a45353; }
+/* 分かれ目 */
+.choiceBox { margin-top: 14px; border: 1px solid var(--gold); border-radius: 12px; padding: 10px 14px 12px; background: rgba(227,194,122,.05); }
+.choiceBox h2 { font-size: 17px; }
+.opts { display: grid; gap: 8px; margin: 8px 0; }
+.opt { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; }
+.opt.is-then { border-color: #5a73c0; background: #232c58; }
+.opt .oh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.opt .oh b { font-size: 16px; }
+.opt .say { margin: 2px 0 2px; }
+.mark { font-size: 14px; line-height: 1.6; padding: 0 9px; border-radius: 6px; font-weight: 600; }
+.mark.first { background: #6b5a2c; color: #fff1cf; } .mark.then { background: #34456e; color: #dbe6ff; } .mark.trig { background: #6a3434; color: #ffd9d9; }
+/* 結び */
+.wrapUp { margin-top: 14px; border-top: 2px solid var(--gold); padding-top: 8px; }
+.ending { border: 2px solid var(--gold); }
+.endBig { font-size: 34px; letter-spacing: .12em; color: var(--gold); text-align: center; margin: 2px 0 8px; font-weight: 700; line-height: 1.4; }
+.endHero { display: flex; justify-content: center; margin: 6px 0; } .endHero .sp { background: #0a0d1c; border-radius: 10px; padding: 6px 10px; }
+.endText { font-size: 16px; line-height: 2; margin: 8px 0; }
+.endFolk { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 8px 0; }
+.folk { display: flex; flex-direction: column; align-items: center; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px; }
+.folk .sp { background: #0a0d1c; border-radius: 6px; padding: 2px; } .folk.foe { border-color: #a45353; }
+.yearHead { display: flex; align-items: center; gap: 10px; margin: 14px 0 6px -8px; color: var(--gold); font-weight: 600; }
+.yearHead::after { content: ""; flex: 1; height: 1px; background: var(--gold); opacity: .55; }
+.relMap { position: relative; width: 100%; max-width: 560px; aspect-ratio: 1 / 0.9; margin: 0 auto 12px; background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; }
+@media (max-width: 640px) { .relMap { aspect-ratio: 1 / 1.25; } }
+.relMap svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rnode { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; background: rgba(10,13,28,.82); border: 2px solid var(--line); border-radius: 10px; padding: 2px 4px 0; line-height: 1.3; font-size: 14px; max-width: 96px; }
+.rnode .sp { display: block; } .rnode .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 92px; }
+.rnode.hero { border-color: var(--gold); } .rnode.dead { opacity: .45; } .rnode.foe { border-color: var(--bad); } .rnode.love { border-color: #d98ac0; } .rnode.ally { border-color: var(--good); }
+.legend { font-size: 14px; color: var(--muted); text-align: center; margin: -6px 0 10px; }
+.sumGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 10px 0; }
+.sumGrid div { background: var(--bg2); border-radius: 8px; padding: 6px 10px; text-align: center; } .sumGrid b { display: block; font-size: 20px; color: var(--gold); }
+
+/* 下の帯 */
+.gods { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; margin-bottom: 10px; }
+.gods .g { display: flex; align-items: center; gap: 8px; }
+.orb { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3c4, #e3b24f 55%, #a67a22); display: inline-block; margin-right: 3px; }
+.orb.off { background: transparent; border: 1px solid var(--line); }
+.heart { display: inline-block; width: 20px; height: 18px; margin-right: 2px; vertical-align: middle; } .heart svg { width: 100%; height: 100%; display: block; }
+.bond { width: 150px; }
+.cards { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.card { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; text-align: left; line-height: 1.6; display: block; width: 100%; }
+.card .nm { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; font-size: 16px; }
+.card .cost { font-size: 14px; color: var(--gold); font-weight: 400; }
+.card .eff { font-size: 14px; color: var(--muted); }
+.card .fit { font-size: 14px; margin-top: 4px; }
+.card .fit b { display: inline-block; padding: 0 8px; border-radius: 6px; margin-right: 6px; }
+.card .why { color: var(--muted); font-size: 14px; display: block; }
+.card.e2 { border-color: #4f9d70; } .e2 .fit b { background: #2e5a42; color: #d9f5e3; }
+.card.e1 { border-color: #5d8a6a; } .e1 .fit b { background: #355142; color: #d9f5e3; }
+.e0 .fit b { background: #3a4263; color: #e0e4f5; }
+.card.m1 { border-color: #9a7a40; } .m1 .fit b { background: #6b5a2c; color: #ffeec8; }
+.card.m2 { border-color: #a45353; } .m2 .fit b { background: #6a3434; color: #ffd9d9; }
+.card.off { opacity: var(--dim); cursor: default; }
+.card.off:hover { border-color: var(--line); }
+.card .reason { display: block; font-size: 14px; color: var(--warn); }
+
+/* 右 */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+.tabs button { border-radius: 8px 8px 0 0; padding: 4px 16px; background: var(--bg2); }
+.tabs button.on { background: var(--panel2); border-color: var(--gold); color: var(--gold); }
+#side .box { min-height: 200px; }
+.kv { display: grid; grid-template-columns: 5.5em 1fr; gap: 2px 10px; }
+.kv > span:nth-child(odd) { color: var(--muted); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 6px; margin: 8px 0; }
+.stats div { background: var(--bg2); border-radius: 8px; padding: 2px 8px; text-align: center; font-size: 14px; line-height: 1.5; } .stats b { display: block; font-size: 18px; color: var(--gold); }
+.person { display: flex; gap: 14px; align-items: flex-start; }
+.person .sp { background: #0a0d1c; border-radius: 8px; padding: 4px; flex: none; }
+.person .info { flex: 1; min-width: 0; }
+.rows { display: grid; gap: 8px; }
+.row { display: flex; gap: 12px; align-items: center; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 6px 12px 6px 8px; text-align: left; width: 100%; }
+.row .sp { background: #0a0d1c; border-radius: 6px; flex: none; padding: 2px; }
+.row .bd { flex: 1; min-width: 0; line-height: 1.6; }
+.row.dead { opacity: .55; }
+.tbar { height: 10px; position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 99px; margin: 3px 0; overflow: hidden; }
+.tbar::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--muted); }
+.tbar i { position: absolute; top: 0; bottom: 0; } .tbar i.pos { background: var(--good); } .tbar i.neg { background: var(--bad); }
+.tl { border-left: 2px solid var(--line); margin-left: 6px; padding-left: 12px; }
+.ev { margin: 0 0 8px; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; }
+.ev > button { display: block; width: 100%; text-align: left; background: transparent; border: 0; padding: 6px 12px; }
+.ev .sum { color: var(--muted); font-size: 14px; display: block; }
+.ev .detail { padding: 0 12px 10px; border-top: 1px solid var(--line); }
+.ev .detail p { margin: 4px 0; }
+.threads { margin-bottom: 10px; }
+.threadRow { background: var(--bg2); border: 1px solid var(--line); border-left: 4px solid #6fd0d0; border-radius: 8px; padding: 4px 10px; margin-bottom: 6px; font-size: 14px; line-height: 1.6; }
+.threadRow.open { border-left-color: var(--warn); }
+.catHead { margin: 12px 0 4px; font-weight: 600; color: var(--blue); border-bottom: 1px solid var(--line); }
+.item { padding: 6px 10px; background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px; }
+.item.gone { opacity: .5; }
+.pips { display: inline-flex; gap: 3px; vertical-align: middle; margin-left: 8px; } .pips i { width: 12px; height: 12px; border-radius: 3px; border: 1px solid var(--blue); } .pips i.on { background: var(--blue); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; align-items: center; }
+
+/* 最初の画面 */
+#startHead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 14px; }
+#startHead h2 { margin: 0 auto 0 0; font-size: 18px; }
+.candGrid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.cand { display: flex; flex-direction: column; gap: 6px; }
+.cand .top { display: flex; gap: 12px; align-items: flex-start; }
+.cand .nm { font-size: 18px; font-weight: 600; }
+.cand .grow { flex: 1; }
+.cand .sp { background: #0a0d1c; border-radius: 8px; padding: 4px; flex: none; }
+
+/* ---- 転生者試作 ---- */
+a { color: var(--blue); }
+.startTabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.startTabs button { padding: 8px 22px; font-size: 16px; border-radius: 10px; background: var(--bg2); }
+.startTabs button.on { background: var(--panel2); border-color: var(--gold); color: var(--gold); font-weight: 600; }
+.lead { color: var(--muted); margin: 0 0 12px; }
+.choiceBox .qline { color: var(--muted); margin: 0 0 8px; }
+.optWrap { display: block; }
+.optMain { display: block; width: 100%; text-align: left; padding: 10px 14px; border-radius: 10px; background: var(--bg2); border: 1px solid #5a73c0; line-height: 1.6; }
+.optMain:hover:not(:disabled) { background: #232c58; border-color: var(--gold); }
+.optMain.hold { border-color: #a45353; }
+.optMain .oh { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+.optMain .oh b { font-size: 17px; }
+.optMain .marks { display: flex; flex-wrap: wrap; gap: 4px 6px; margin: 3px 0; }
+.optMain .say { display: block; margin: 2px 0 4px; }
+.cw { display: inline-block; font-weight: 700; padding: 0 10px; border-radius: 6px; font-size: 14px; }
+.cw.good { background: #2e5a42; color: #d9f5e3; } .cw.mid { background: #6b5a2c; color: #ffeec8; } .cw.bad { background: #6a3434; color: #ffd9d9; }
+.mark.both { background: #4b3f6e; color: #ece4ff; }
+.mark.hold { background: #3a2230; color: #ffd9d9; border: 1px solid #a45353; }
+.detailBtn { font-size: 13px; padding: 0 12px; margin: 4px 0 0 4px; border-radius: 6px; }
+.detailBox { margin: 4px 4px 0; }
+.skipped { color: var(--muted); font-size: 14px; margin: 2px 0 10px; }
+.skip { display: inline-block; padding: 0 9px; margin: 2px 6px 2px 0; border: 1px dashed var(--line); border-radius: 6px; opacity: .65; }
+.lines p.ln.personaLine { color: var(--gold); border-left: 3px solid var(--gold); padding-left: 8px; font-style: normal; font-weight: 600; }
+.cardMsg.voice { border-color: var(--blue); background: rgba(127,166,224,.08); }
+.band { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: center; }
+.band .g { display: flex; align-items: center; gap: 8px; }
+.kdots { display: inline-flex; gap: 3px; flex-wrap: wrap; }
+.kdots i { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #dfe9ff, #7fa6e0 55%, #3c4f8f); }
+.kdots i.off { background: transparent; border: 1px solid var(--line); }
+.prayRow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+.growRow { margin: 4px 0; }
+.chip.lean { border-color: #5a73c0; }
+.fgrid { display: grid; gap: 10px 16px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); margin: 8px 0 12px; }
+.fld { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fld > label { color: var(--muted); font-size: 14px; }
+.fld select, .fld input[type=text], .fld input[type=number] { font: inherit; color: var(--text); background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; width: 100%; min-width: 0; }
+.fld .row2 { display: flex; gap: 6px; }
+.formErr { color: var(--bad); min-height: 1.6em; }
+.formPrev { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.formPrev .sp { background: #0a0d1c; border-radius: 8px; padding: 4px; flex: none; }
+.lifeBox h2 { margin-bottom: 4px; }
+@media (max-width: 640px) {
+  .startTabs button { flex: 1; padding: 8px 10px; }
+  .optMain .oh b { font-size: 16px; }
+  .endBig { font-size: 26px; }
+}
+/* ---- ゆっくり続ける版 ---- */
+.modeGrid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 12px; }
+.modeCard { display: flex; flex-direction: column; gap: 8px; }
+.modeCard h2 { font-size: 19px; }
+.modeCard.main { border-color: var(--gold); }
+.hubHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.hubHead .dateBig { font-size: 20px; font-weight: 600; color: var(--gold); letter-spacing: .03em; }
+.feedBox { margin: 8px 0 4px; padding: 6px 12px; border-left: 3px solid #5a73c0; background: rgba(90,115,192,.08); border-radius: 0 8px 8px 0; min-height: 2.4em; }
+.feedBox p { margin: 4px 0; }
+.feedBox p.rumorLine { color: var(--gold); }
+.feedBox p.upLine { color: var(--good2); font-weight: 600; }
+.actGrid { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 6px; }
+.actBtn { display: flex; flex-direction: column; align-items: flex-start; text-align: left; min-width: 128px; padding: 6px 12px; line-height: 1.4; }
+.actBtn b { font-size: 16px; }
+.actBtn span { font-size: 12.5px; color: var(--muted); }
+.actBtn.on { border-color: var(--gold); background: #2c3560; }
+.subBox { margin: 6px 0 10px; padding: 8px 12px; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; }
+.subBox .rowx { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 3px 0; }
+.subBox .rowx .grow { flex: 1; min-width: 8em; }
+.miniBar { width: 90px; height: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; display: inline-block; vertical-align: middle; }
+.miniBar i { display: block; height: 100%; background: var(--blue); }
+.secHead { margin: 14px 0 4px; font-weight: 600; color: var(--blue); border-bottom: 1px solid var(--line); }
+.rumorRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px 10px; margin: 6px 0; background: var(--bg2); border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 8px; }
+.rumorRow.passed { opacity: .55; border-left-color: var(--line); }
+.rumorRow.quest { border-left-color: var(--good); }
+.rumorRow .grow { flex: 1 1 14em; min-width: 0; }
+.allyRow { display: flex; gap: 10px; align-items: center; padding: 5px 10px 5px 6px; margin: 6px 0; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; }
+.allyRow .sp { background: #0a0d1c; border-radius: 6px; padding: 2px; flex: none; }
+.allyRow .grow { flex: 1; min-width: 0; line-height: 1.5; }
+.talkBox { margin-top: 8px; }
+.talkBox .lines p { margin: 8px 0; }
+.deltaChip { display: inline-block; font-size: 13px; padding: 0 9px; border-radius: 99px; margin-left: 8px; background: var(--bg2); border: 1px solid var(--line); }
+.deltaChip.up { color: var(--good2); border-color: #4f9d70; } .deltaChip.down { color: #ff9a9a; border-color: #a45353; }
+.replyBtn { display: block; width: 100%; text-align: left; margin: 6px 0; padding: 8px 14px; border-radius: 10px; border: 1px solid #5a73c0; background: var(--bg2); line-height: 1.6; }
+.replyBtn:hover { background: #232c58; border-color: var(--gold); }
+.replyBtn .say { color: var(--muted); font-size: 14px; display: block; }
+.shopGrid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.shopItem { display: flex; gap: 8px; align-items: center; padding: 5px 8px; margin: 5px 0; background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; }
+.shopItem .grow { flex: 1; min-width: 0; line-height: 1.5; }
+.diaryDay { margin: 12px 0 4px; color: var(--gold); font-weight: 600; border-bottom: 1px solid var(--line); }
+.diaryRow { display: flex; gap: 8px; padding: 3px 0; line-height: 1.6; }
+#mapWrap { position: relative; max-width: 560px; }
+#mapWrap img { width: 100%; display: block; image-rendering: pixelated; border: 1px solid var(--line); }
+#mapWrap svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.mapPt { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; padding: 0; border: 0; background: transparent; cursor: pointer; min-height: 0; }
+.mapPt i { position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: rgba(255,255,255,.28); border: 1px solid rgba(0,0,0,.5); }
+.mapPt.site i { width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 1px; }
+.mapPt.seen i { background: #fff; }
+.mapPt.rumor i { background: #ffd24a; box-shadow: 0 0 0 2px rgba(255,210,74,.55); }
+.mapPt.dest::after { content: ''; position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border: 2px solid #34d27b; border-radius: 50%; }
+.mapPt.here i { width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; background: #ef3a4c; border: 2px solid #fff; box-shadow: 0 0 6px #000; }
+.mapPt.sel { z-index: 2; } .mapPt.sel i { outline: 2px solid var(--gold); outline-offset: 2px; }
+.mapLegend { margin: 6px 0; } .mapInfo { margin: 8px 0; padding: 8px 12px; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; }
+.mapInfoHead { margin-bottom: 4px; } .mapInfo .small { margin: 2px 0; }
+.mapTab .rowx { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 3px 0; } .mapTab .rowx .grow { flex: 1 1 8em; min-width: 0; }
+.placeLine { margin: 4px 0 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; } .placeLine button { padding: 2px 10px; }
+.whereLine { color: var(--muted); } .whereTag { display: inline-block; font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 0 7px; margin-right: 6px; }
+.worldSet { margin: 6px 0 10px; } .worldSet label { display: inline-block; margin-right: 12px; white-space: nowrap; }
+.diaryRow .sl { flex: none; width: 3.2em; color: var(--muted); font-size: 13px; }
+.diaryRow.ep { background: var(--bg2); border-radius: 8px; padding: 4px 8px; margin: 4px 0; }
+.diaryRow.ep b { color: var(--text); }
+.diaryRow.small { color: var(--muted); font-size: 14px; }
+.diaryRow .dtl { display: block; margin-top: 4px; }
+.recapBox h2 { font-size: 19px; }
+.recapBox ul { margin: 4px 0 10px; padding-left: 1.3em; }
+.relExtra { font-size: 13px; color: var(--muted); }
+.stageChip { border-color: #5a73c0; }
+@media (max-width: 640px) {
+  .actBtn { min-width: calc(50% - 4px); flex: 1 1 calc(50% - 4px); }
+  .hubHead .dateBig { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top"></div>
+  <div id="root"><div class="box muted">台本を読み込んでいる…</div></div>
+</div>
+
+<script src="../人物生成/persona-data.js"></script>
+<script src="../人物生成/persona-core.js"></script>
+<script src="../人物生成/persona-lines.js"></script>
+<script src="../人物生成/persona-voice.js"></script>
+<script src="../背景合成/描き込み試作/chara2.js"></script>
+<script src="../背景合成/描き込み試作/rich-core.js"></script>
+<script src="../人生試作/items-data.js"></script>
+<script src="../物語試作/story-data.js"></script>
+<script>
+// 台本（episodes\*.js）の一覧は episodes/index.json（serve.mjs が返す）。台本を足してもコードは直さない。
+// _ で始まる確認用の台本は、?check=1 のとき、または他に台本が無いときだけ読み込まれる。
+(function () {
+  'use strict';
+  function loadScript(src) { return new Promise((ok, ng) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => ng(new Error('読み込めない: ' + src)); document.head.appendChild(s); }); }
+  const q = new URLSearchParams(location.search).get('check') === '1' ? '?check=1' : '';
+  (async () => {
+    let list = [];
+    try { list = await (await fetch('../物語試作/episodes/index.json' + q, { cache: 'no-store' })).json(); } catch (e) { document.getElementById('root').textContent = '台本の一覧を取れなかった：' + e.message; return; }
+    // 小さな場面（moments\*.js）と会話（talks\*.js）の一覧も、同じ規則で serve.mjs が返す
+    let mlist = [], tlist = [], rlist = [];
+    try { mlist = await (await fetch('moments/index.json' + q, { cache: 'no-store' })).json(); tlist = await (await fetch('talks/index.json' + q, { cache: 'no-store' })).json(); } catch (e) { mlist = []; tlist = []; }
+    try { rlist = await (await fetch('rumors/index.json' + q, { cache: 'no-store' })).json(); } catch (e) { rlist = []; }   // 台本ごとの噂の文（rumors\*.js）。無くても遊べる
+    try {
+      globalThis.MomentEpisodes = globalThis.MomentEpisodes || []; globalThis.TalkLines = globalThis.TalkLines || [];
+      for (const f of list) await loadScript('../物語試作/episodes/' + encodeURIComponent(f));
+      await loadScript('../物語試作/world/world-data.js'); await loadScript('../物語試作/world/story-world.js');   // 世界の地図（国・場所・道・施設）。物語試作の world\ を読む
+      await loadScript('../物語試作/story-core.js'); await loadScript('player-core.js');
+      for (const f of mlist) await loadScript('moments/' + encodeURIComponent(f));
+      for (const f of tlist) await loadScript('talks/' + encodeURIComponent(f));
+      // 噂の文：各ファイルは globalThis.StoryRumors = { 台本のid: [噂の文, …] } を代入する。ファイルごとに受け取って合わせる
+      const merged = {};
+      for (const f of rlist) { globalThis.StoryRumors = undefined; try { await loadScript('rumors/' + encodeURIComponent(f)); } catch (e) { continue; } const r = globalThis.StoryRumors || {}; Object.keys(r).forEach(k => { merged[k] = (merged[k] || []).concat(r[k]); }); }
+      globalThis.StoryRumors = merged;
+      await loadScript('town-core.js');
+    }
+    catch (e) { document.getElementById('root').textContent = e.message; return; }
+    globalThis.__episodeFiles = list; globalThis.__momentFiles = mlist; globalThis.__talkFiles = tlist; globalThis.__rumorFiles = rlist;
+    document.dispatchEvent(new Event('story-ready'));
+  })();
+})();
+</script>
+<script>
+(function () {
+'use strict';
+document.addEventListener('story-ready', () => { init(); });
+function init() {
+const Story = globalThis.Story, Player = globalThis.Player, Town = globalThis.Town, D = globalThis.StoryData, PD = globalThis.PersonaData, Persona = globalThis.Persona, Chara2 = globalThis.Chara2, RC = globalThis.RichCore;
+const SAVE_KEY = Player.SAVE_KEY, SAVE_KEY2 = Town.SAVE_KEY2;
+const TIME_NAME = { day: '昼', dusk: '夕方', night: '夜' };
+const OUT_NAME = { win: '成功', lose: '失敗' };
+const END_BIG = { wish: '成就', death: '命が尽きた', peace: '余生', abandon: '神を捨てた' };
+const TAB_NAME = [['person', '人'], ['log', '年表'], ['rel', '関係'], ['items', '持ち物'], ['skills', 'スキル']];
+const THREAD_LABEL = { debt: '恩', omen: '兆し', feud: '因縁', promise: '約束', secret: '秘密', illness: '病の兆し', rival: '好敵手', grudge: '恨み',
+  tensei_trace: '転生の手がかり', kin_in_forest: '森の家族', road_raiders: '街道の荒らし', broken_shrine: '割れた祠', waiting_ship: '待つ船',
+  beloved: '想い人', fond: '親しい人', frail: '弱った人', grave: '墓', missing: '行方知れず', wanderer: '旅の人', oath: '誓い', 'lost-one': '失った人', 'reg-note': '登録の控え',
+  backer: '後ろ盾', confide: '打ち明け', false_origin: '偽りの生まれ', farewell: '別れ', hidden_power: '秘めた力', lizard_den: '蜥蜴の巣', deep_floor: '深い階', pupil: '弟子' };
+
+const S = { W: null, seed: 0, cands: null, tab: 'person', relFocus: null, newest: true, open: new Set(), msg: '', stick: false, startTab: 'cands', form: null, detail: new Set(), praying: false,
+  mode: null, sub: null, recap: false, toTop: false };   // mode＝null（最初の選択）／'slow'（ゆっくり続ける）／'story'（物語だけを読む＝最初の版）
+const isSlow = () => !!(S.W && S.W.town);
+const keyNow = () => (S.mode === 'slow' ? SAVE_KEY2 : SAVE_KEY);
+
+// ---------- 道具 ----------
+function put(parent, ...kids) { for (const k of kids.flat(3)) { if (k == null || k === false) continue; parent.append(k.nodeType ? k : document.createTextNode(String(k))); } return parent; }
+function el(tag, cls, ...kids) {
+  const e = document.createElement(tag); if (cls) e.className = cls;
+  for (const k of kids.flat(3)) { if (k == null || k === false) continue; e.append(k.nodeType ? k : document.createTextNode(String(k))); }
+  return e;
+}
+function btn(label, fn, cls, dis) { const b = el('button', cls || '', label); b.type = 'button'; if (dis) b.disabled = true; else b.addEventListener('click', fn); return b; }
+const hero = () => S.W.people[S.W.heroId];
+const pAny = id => S.W.people[id] || null;
+const nickOf = id => { const p = pAny(id); return p ? p.nick : '？'; };
+const placeName = k => D.PLACE_NAME[k] || k;
+const SWd = globalThis.StoryWorld || null;
+const locLabel = src => src && src.loc && src.loc.name ? src.loc.name + (src.loc.nation ? '（' + src.loc.nation + '）' : '') : placeName(src.place);
+const CONTENT_KEY = 'kami-content';
+const contentOff = () => { const o = saveable(() => JSON.parse(localStorage.getItem(CONTENT_KEY) || '{}')) || {}; return Object.keys(o).filter(k => o[k] === false); };
+const typeName = t => Story.TYPE_NAME(t);
+const skillName = id => { const s = D.SKILLS.find(x => x.id === id); return s ? s.name : id; };
+const itemName = no => { const i = Story.item(no); return i ? i.name : '物' + no; };
+const threadLabel = id => THREAD_LABEL[id] || '名のない糸';   // 英字のキーは画面に出さない
+// 糸を張った・引いた時の言い方：エピソードは「第◯話」、小さな場面は「◯月◯日」（小さな場面の中の番号は出さない）
+const threadWhen = (turn, date) => (date ? date : '第' + turn + '話');
+function say(m) { S.msg = m || ''; const e = document.getElementById('msg'); if (e) e.textContent = S.msg; }
+function saveable(f) { try { return f(); } catch (e) { return null; } }
+
+// ---------- 絵 ----------
+const spriteCache = {}, sceneCache = {};
+const sprKey = (look, build) => look + (build ? '|' + build : '');
+function spriteOf(look, build) {
+  const k = sprKey(look, build);
+  if (!spriteCache[k]) { const r = Chara2.ROLES.find(x => x[0] === look) || Chara2.ROLES[0]; spriteCache[k] = Chara2.compose(build ? Object.assign({}, r[1], { build }) : r[1]); }
+  return spriteCache[k];
+}
+function paint(cv, img) {
+  cv.width = img.w; cv.height = img.h;
+  const ctx = cv.getContext('2d'), id = ctx.createImageData(img.w, img.h), d = id.data;
+  for (let i = 0; i < img.px.length; i++) { const c = img.px[i]; if (!c) continue; d[i * 4] = parseInt(c.slice(1, 3), 16); d[i * 4 + 1] = parseInt(c.slice(3, 5), 16); d[i * 4 + 2] = parseInt(c.slice(5, 7), 16); d[i * 4 + 3] = 255; }
+  ctx.putImageData(id, 0, 0);
+}
+function spriteCv(look, scale, build) {
+  const img = spriteOf(look, build), cv = el('canvas', 'px'); paint(cv, img);
+  cv.style.width = img.w * scale + 'px'; cv.style.height = img.h * scale + 'px'; cv.setAttribute('aria-label', look);
+  return cv;
+}
+// src＝{ place, time, bg, ids:[関わる人の id] }
+function sceneCv(src) {
+  const ppl = [hero()];
+  (src.ids || []).forEach(id => { const p = pAny(id); if (p && ppl.length < 3 && !ppl.some(q => sprKey(q.look, q.build) === sprKey(p.look, p.build))) ppl.push(p); });
+  const bg = src.bg || D.BG[src.place] || 'village', time = src.time || 'day', key = bg + '|' + time + '|' + ppl.map(q => sprKey(q.look, q.build)).join(',');
+  if (!sceneCache[key]) { sceneCache[key] = saveable(() => RC.stage({ place: bg, time }, ppl.map(q => spriteOf(q.look, q.build)))) || { w: 192, h: 108, px: new Array(192 * 108).fill('#202848') }; }
+  const cv = el('canvas', 'px scene'); paint(cv, sceneCache[key]); cv.dataset.w = sceneCache[key].w; cv.dataset.h = sceneCache[key].h;
+  cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', placeName(src.place) + 'の場面');
+  return cv;
+}
+function fitScenes() {
+  document.querySelectorAll('canvas.scene').forEach(cv => {
+    const avail = cv.parentElement.clientWidth || 600, w = +cv.dataset.w, h = +cv.dataset.h, k = Math.max(1, Math.min(window.innerWidth >= 1100 ? (window.innerHeight < 1000 ? 2 : 3) : 4, Math.floor(avail / w)));
+    const f = k < 2 ? Math.min(avail, w * 2) / w : k;
+    cv.style.width = w * f + 'px'; cv.style.height = h * f + 'px';
+  });
+}
+
+// ---------- 小さな部品 ----------
+function heartSvg(on) {
+  const s = el('span', 'heart'); s.innerHTML = '<svg viewBox="0 0 16 14" aria-hidden="true"><path d="M8 13 L1.2 6.4 A3.9 3.9 0 0 1 8 2.3 A3.9 3.9 0 0 1 14.8 6.4 Z" fill="' + (on ? '#e27f7f' : 'none') + '" stroke="#e27f7f" stroke-width="1.2"/></svg>'; return s;
+}
+function bar(pct, cls) { const b = el('div', 'bar ' + (cls || '')), i = el('i'); i.style.width = Math.max(0, Math.min(100, pct)) + '%'; put(b, i); return b; }
+function trustBar(t) { const b = el('div', 'tbar'), i = el('i', t >= 0 ? 'pos' : 'neg'); i.style.left = (t >= 0 ? 50 : 50 + t / 2) + '%'; i.style.width = Math.abs(t) / 2 + '%'; put(b, i); return b; }
+function fitClass(sc) { return sc >= 2 ? 'e2' : sc === 1 ? 'e1' : sc === 0 ? 'e0' : sc === -1 ? 'm1' : 'm2'; }
+function sgn(n) { return (n > 0 ? '+' : '') + n; }
+
+// ---------- 効果の印 ----------
+function tagOf(e) {
+  const hid = S.W.heroId, T = (cls, text) => el('span', 'tag ' + cls, text);
+  if (e.t === 'item' && e.who === hid) return e.n > 0 ? T('item', '＋持ち物 ' + itemName(e.no)) : T('item lost down', '失った ' + itemName(e.no));
+  if (e.t === 'skill' && e.who === hid) return T('skill', '＋スキル ' + skillName(e.id) + ' Lv' + e.lv);
+  if (e.t === 'rel') { if (e.type) return T('rel', nickOf(e.b) + '：' + ((D.REL_TYPES[e.type] || {}).name || e.type)); if (e.known) return T('rel', nickOf(e.b) + 'の過去を知った'); if (e.d) return T('rel ' + (e.d > 0 ? 'up' : 'down'), nickOf(e.b) + 'との信頼 ' + sgn(e.d)); return null; }
+  if (e.t === 'meet') return T('rel', '出会い ' + nickOf(e.id));
+  if (e.t === 'stat' && e.who === hid && e.d) return T(e.d > 0 ? 'up' : 'down', e.key + ' ' + sgn(e.d));
+  if (e.t === 'death') return T('down', nickOf(e.id) + 'が亡くなった');
+  if (e.t === 'flag' && e.who === hid) return T(e.on ? 'down' : 'up', e.flag + (e.on ? 'を負った' : 'が消えた'));
+  if (e.t === 'goal') return T(e.d > 0 ? 'up' : 'down', '望み ' + sgn(e.d));
+  if (e.t === 'job' && e.who === hid) return T('sys', '職 ' + e.job);
+  if (e.t === 'mark') return T(e.on ? 'up' : 'down', (Story.MARKS[e.name] || e.name) + (e.on ? ' になった' : ' でなくなった'));
+  if (e.t === 'missing') return T('down', nickOf(e.id) + 'が行方知れずになった');
+  if (e.t === 'found') return T('up', nickOf(e.id) + 'が見つかった');
+  if (e.t === 'away') return T('sys', nickOf(e.id) + 'が旅に出た');
+  if (e.t === 'back') return T('up', nickOf(e.id) + 'が旅から戻った');
+  return null;
+}
+const tagsOf = effs => (effs || []).map(tagOf).filter(Boolean);
+// 効果をまとめて印にする（同じ能力値は足す）
+function sumTags(effs) {
+  const stat = {}, rest = [];
+  (effs || []).forEach(e => { if (e.t === 'stat' && e.who === S.W.heroId) stat[e.key] = (stat[e.key] || 0) + e.d; else rest.push(e); });
+  const st = Object.keys(stat).filter(k => stat[k]).map(k => el('span', 'tag ' + (stat[k] > 0 ? 'up' : 'down'), k + ' ' + sgn(stat[k])));
+  return tagsOf(rest).concat(st);
+}
+
+// ---------- 文の表示 ----------
+function lineEls(l) {
+  const out = [];
+  if (l.tm) out.push(el('p', 'lt', '— ' + (TIME_NAME[l.tm] || l.tm) + 'になった —'));
+  if (l.k === 'c') out.push(el('p', 'lc', '▼ ' + l.t));
+  else if (l.k === 's') out.push(el('p', 'lsay', el('b', '', l.name + '：'), '『' + l.t + '』'));
+  else if (l.k === 'n') out.push(el('p', 'ln' + (l.trig ? ' trigLine' : '') + (l.persona ? ' personaLine' : ''), l.t));
+  else out.push(el('p', '', l.t));
+  const t = tagsOf(l.fx); if (t.length) out.push(el('div', 'tags', t));
+  return out;
+}
+function partsView(parts) {
+  if (!parts || !parts.length) return null;
+  const w = el('div', 'parts', el('span', 'muted', '内訳'));
+  parts.forEach(x => put(w, el('span', 'part ' + (x.d > 0 && x.name !== '基礎' ? 'up' : x.d < 0 ? 'down' : ''), x.name + ' ' + (x.name === '基礎' ? x.d : sgn(x.d)))));
+  return w;
+}
+function chanceRow(chance, parts) {
+  const b = bar(chance, 'chance'); b.querySelector('i').style.width = chance + '%';
+  return el('div', '', el('div', 'chanceRow', el('b', '', '成功率 ' + chance + '%'), b), partsView(parts));
+}
+const whenOf = src => (src.year ? src.year + '年目・' : '') + (src.season || '') + (src.month ? src.month + '月' : '');
+// 出来事（進行中の台本でも、終わった台本でも）の見出しの材料
+function hdrOf(src) {
+  const ids = Array.isArray(src.cast) ? src.cast.map(c => c.id) : Object.keys(src.cast).map(k => src.cast[k]);
+  const list = Array.isArray(src.cast) ? src.cast : Object.keys(src.cast).map(k => ({ id: src.cast[k], role: src.castAll[k] }));
+  return { ids, list };
+}
+function dateTextOf(src) {
+  if (src.dateText) return src.dateText;
+  if (src.day0 != null) return Town.dateOf(S.W, src.day0, src.slot0);
+  if (src.day != null) return Town.dateOf(S.W, src.day, src.slot);
+  return '';
+}
+function evHeader(src) {
+  const h = hdrOf(src);
+  if (isSlow()) {
+    const small = src.turn >= 1000 || src.moment;
+    return el('div', '', el('div', 'evHead', el('span', 't', src.title), el('span', 'chip', small ? '小さな場面' : (src.type ? typeName(src.type) : '')),
+        el('span', 'muted small', dateTextOf(src) + '　' + src.age + '歳　' + locLabel(src) + (src.travel ? '（' + src.travel + '日かけて向かった）' : '') + (src.span ? '　この話で' + src.span + '日たつ' : ''))),
+      el('div', 'stake', '懸かっているもの：' + src.stake), h.list.length ? el('div', 'small muted', '関わる人：' + h.list.map(c => nickOf(c.id) + '（' + c.role + '）').join('、')) : null);
+  }
+  return el('div', '', el('div', 'evHead', el('span', 't', src.title), el('span', 'chip', typeName(src.type)), el('span', 'muted small', '第' + src.turn + '話　' + whenOf(src) + '　' + src.age + '歳　' + locLabel(src) + '（' + (TIME_NAME[src.time] || '') + '）' + (src.span ? '　この話で' + src.span + '日たつ' : ''))),
+    el('div', 'stake', '懸かっているもの：' + src.stake), h.list.length ? el('div', 'small muted', '関わる人：' + h.list.map(c => nickOf(c.id) + '（' + c.role + '）').join('、')) : null);
+}
+
+// ---------- 画面の組み立て ----------
+function renderTop() {
+  const top = document.getElementById('top'); top.textContent = '';
+  const has = !!saveable(() => localStorage.getItem(keyNow()));
+  const nM = (globalThis.MomentEpisodes || []).concat(globalThis.StoryMoments || []).length, nT = (globalThis.TalkLines || []).length;
+  put(top, el('h1', '', '異世界転生者になろう' + (S.mode === 'slow' ? '　ゆっくり続ける版' : S.mode === 'story' ? '　物語だけを読む' : '')),
+    S.W ? el('span', 'muted small', '種 ' + S.W.seed + '　台本 ' + (globalThis.__episodeFiles ? '' : '') + globalThis.StoryEpisodes.filter(e => !e.kind).length + '本' + (isSlow() ? '・小さな場面 ' + nM + '本・会話 ' + nT + '本' : '')) : null,
+    S.mode ? btn('保存', doSave, '', !S.W) : null, S.mode ? btn('読み込み', doLoad, '', !has) : null, S.mode ? btn('新しい人生', newLife) : null, S.mode ? btn('最初の画面へ', toModePick) : null, el('a', 'small', '神様視点の物語試作へ'),
+    (() => { const m = el('div'); m.id = 'msg'; m.textContent = S.msg; return m; })());
+}
+function render() {
+  const sideOld = document.getElementById('side'), sideTop = sideOld ? sideOld.scrollTop : 0, stOld = document.getElementById('storyBox'), stTop = stOld ? stOld.scrollTop : 0;
+  renderTop();
+  const root = document.getElementById('root'); root.textContent = '';
+  document.body.classList.toggle('playing', !!S.W);
+  if (!S.W) { put(root, renderStart()); return; }
+  const g = el('div'); g.id = 'game';
+  const left = el('div'), main = el('div'), hand = el('div'), side = el('div'); left.id = 'left'; main.id = 'main'; hand.id = 'hand'; side.id = 'side';
+  put(left, main, hand); put(g, left, side); put(root, g);
+  if (isSlow()) { renderSlowMain(main); renderSlowHand(hand); renderSlowSide(side); }
+  else { renderMain(main); renderHand(hand); renderSide(side); }
+  fitScenes();
+  side.scrollTop = sideTop;
+  const sb = document.getElementById('storyBox');
+  if (sb) { if (S.toTop) sb.scrollTop = 0; else if (S.stick) { sb.scrollTop = sb.scrollHeight; } else sb.scrollTop = stTop; }
+  S.stick = false; S.toTop = false;
+}
+
+// 最初の画面：候補3人から選ぶ／自分で作る
+function renderModePick() {
+  const has2 = !!saveable(() => localStorage.getItem(SAVE_KEY2)), has1 = !!saveable(() => localStorage.getItem(SAVE_KEY));
+  return el('div', '', el('p', 'lead', 'あなたが転生者本人になります。どちらの遊び方にしますか。'), el('div', 'modeGrid',
+    el('div', 'box modeCard main', el('h2', '', 'ゆっくり続ける'), el('div', '', '1日を 朝・昼・夕・夜 に分けて、町で暮らします。休む・買う・鍛える・仲間と話す・噂を聞く。噂や頼まれごとから、物語（エピソード）が始まります。数時間〜何日にもわたって、ゆっくり続けて遊べます。自動で保存され、続きから始めると「前回までのあらすじ」が出ます。'),
+      el('div', 'actions', btn('ゆっくり続ける版で始める', () => { S.mode = 'slow'; S.startTab = 'cands'; render(); }, 'gold'), has2 ? btn('続きから', () => { S.mode = 'slow'; doLoad(); }, 'primary') : null)),
+    el('div', 'box modeCard', el('h2', '', '物語だけを読む（最初の版）'), el('div', '', '物語のエピソードだけを、次々に読み進めます。分かれ目で自分で道を選びます。1話で数か月が過ぎ、10〜14話で人生が終わります。神視点の物語試作と、遊び比べるための版です。'),
+      el('div', 'actions', btn('最初の版で始める', () => { S.mode = 'story'; S.startTab = 'cands'; render(); }, 'primary'), has1 ? btn('続きから', () => { S.mode = 'story'; doLoad(); }) : null))));
+}
+function toModePick() {
+  if (S.W && !S.W.over && (S.W.log.length > 1) && !confirm('いまの人生を中断して、最初の画面に戻りますか？\n（自動保存された続きは、「続きから」で戻せます）')) return;
+  S.W = null; S.mode = null; S.cands = null; S.sub = null; S.recap = false; Town.cleanup(); say(''); render(); window.scrollTo(0, 0);
+}
+function renderStart() {
+  if (!S.mode) return renderModePick();
+  const wrap = el('div');
+  put(wrap, el('div', 'startTabs', btn('候補3人から選ぶ', () => { S.startTab = 'cands'; render(); }, S.startTab === 'cands' ? 'on' : ''), btn('自分で作る', () => { S.startTab = 'make'; render(); }, S.startTab === 'make' ? 'on' : '')));
+  put(wrap, S.startTab === 'make' ? renderMake() : renderCands());
+  return wrap;
+}
+// きわどい要素の ON/OFF（最初の画面）。切ると、その場所・施設・組織・噂は出ない（物語試作と同じ）
+function worldSetBox() {
+  const off = contentOff(), box = el('div', 'box worldSet');
+  put(box, el('b', '', '世界の設定'), el('span', 'muted small', '　きわどい要素（切ると、その場所・施設は選ばれず、文にも出ません。この人生を始めるときに決まります）'), el('br'));
+  SWd.contentFlags().forEach(f => {
+    const cb = el('input'); cb.type = 'checkbox'; cb.checked = !off.includes(f.code); cb.id = 'ct_' + f.code;
+    cb.addEventListener('change', () => { saveable(() => { const o = JSON.parse(localStorage.getItem(CONTENT_KEY) || '{}'); o[f.code] = cb.checked; localStorage.setItem(CONTENT_KEY, JSON.stringify(o)); }); });
+    const lb = el('label', '', cb, ' ' + f.label); lb.htmlFor = cb.id; put(box, lb);
+  });
+  return box;
+}
+function renderCands() {
+  const wrap = el('div');
+  if (!S.cands) S.cands = Story.candidates(S.seed, 3);
+  const has = !!saveable(() => localStorage.getItem(keyNow()));
+  const seedIn = el('input'); seedIn.type = 'number'; seedIn.value = S.seed; seedIn.setAttribute('aria-label', '種');
+  seedIn.addEventListener('change', () => { const v = parseInt(seedIn.value, 10); if (Number.isFinite(v)) { S.seed = v; S.cands = null; render(); } });
+  put(wrap, el('p', 'lead', 'あなたが転生者本人になります。分かれ目で、どの道を行くかを自分で選びます。気質と信条は「心の声」として横に出ますが、従うかどうかは自由です。' + (S.mode === 'slow' ? '（ゆっくり続ける版：転生したあとは、町で暮らしながら物語に出会います）' : '（物語だけを読む版）')));
+  put(wrap, (() => {
+    const hd = el('div'); hd.id = 'startHead';
+    put(hd, el('h2', '', '転生する人を選ぶ'), el('span', 'muted small', '種'), seedIn,
+      btn('ほかの3人を見る', () => { S.seed = Math.floor(Math.random() * 100000); S.cands = null; render(); }),
+      has ? btn(S.mode === 'slow' ? '続きから（あらすじを見る）' : '続きから', doLoad, 'gold') : null);
+    return hd;
+  })());
+  put(wrap, worldSetBox());
+  const grid = el('div', 'candGrid');
+  S.cands.forEach(c => {
+    const pm = Persona.make(c.persona);
+    put(grid, el('div', 'box cand',
+      el('div', 'top', el('div', 'sp', spriteCv(c.look, 4)), el('div', 'grow',
+        el('div', 'nm', c.name), el('div', 'small muted', c.sex + '　' + c.age + '歳　前世：' + c.prevJob), el('div', '', '呼び名：' + pm.title))),
+      el('div', '', el('span', 'muted', '望み：'), pm.goal, el('span', 'muted small', '（' + pm.wishName + '）')),
+      el('div', 'small', el('span', 'muted', '気質：'), pm.s1.name, el('span', 'muted', '　×　信条：'), pm.s2.name, el('span', 'muted', '　×　過去：'), pm.past.event),
+      (g => g ? el('div', 'small gift', el('span', 'muted', '授かった力：'), el('b', '', g.name), '（' + g.desc + '）') : null)(D.SKILLS.find(x => x.id === c.cheat)),
+      btn('この人になる', () => start(c), 'primary')));
+  });
+  put(wrap, grid);
+  return wrap;
+}
+// 自分で作る
+const jobKey = j => j.era + '|' + j.job;
+function formInit() {
+  const o = Player.options(), r = a => a[Math.floor(Math.random() * a.length)], sex = r(['男', '女']);
+  S.form = { surname: r(o.surnames), given: r(o.given[sex]), sex, age: 24, jobKey: null, past: null, s1: 'omakase', s2: 'omakase', cheat: r(o.gifts).id };
+  fixForm();
+}
+function formJob() { const f = S.form; return Player.jobs(f.sex).find(j => jobKey(j) === f.jobKey) || null; }
+function fixForm() {
+  const f = S.form, js = Player.jobs(f.sex);
+  f.age = Math.max(Player.T.ageMin, Math.min(Player.T.ageMax, Math.floor(+f.age) || 24));
+  if (!js.some(j => jobKey(j) === f.jobKey)) { const d = js.find(j => j.job === '会社員') || js[0]; f.jobKey = jobKey(d); }
+  const j = formJob(), ok = k => Player.pastCheck(k, j.era, j.job, f.age).ok;
+  if (!f.past || !ok(f.past)) f.past = Object.keys(PD.PAST).find(ok);
+}
+function formCond() { const f = S.form, j = formJob(); return { surname: f.surname, given: f.given, sex: f.sex, age: f.age, era: j.era, job: j.job, past: f.past, s1: f.s1, s2: f.s2, cheat: f.cheat }; }
+function renderMake() {
+  if (!S.form) formInit();
+  fixForm();
+  const f = S.form, O = Player.options(), j = formJob(), res = Player.custom(formCond());
+  const again = () => { fixForm(); render(); };
+  const text = (key, label) => { const i = el('input'); i.type = 'text'; i.value = f[key]; i.maxLength = 12; i.setAttribute('aria-label', label); i.addEventListener('change', () => { f[key] = i.value; again(); }); return i; };
+  const sel = (opts, cur, fn, label) => { const s = el('select'); s.setAttribute('aria-label', label || ''); opts.forEach(([v, t, dis]) => { const op = el('option', '', t); op.value = v; if (dis) op.disabled = true; if (v === cur) op.selected = true; s.append(op); }); s.addEventListener('change', () => { fn(s.value); again(); }); return s; };
+  const fld = (label, node, note) => el('div', 'fld', el('label', '', label), node, note ? el('span', 'small muted', note) : null);
+  const ageIn = el('input'); ageIn.type = 'number'; ageIn.min = Player.T.ageMin; ageIn.max = Player.T.ageMax; ageIn.value = f.age; ageIn.setAttribute('aria-label', '年齢'); ageIn.addEventListener('change', () => { f.age = ageIn.value; again(); });
+  const jobsM = Player.jobs(f.sex).filter(x => x.era === 'modern'), jobsP = Player.jobs(f.sex).filter(x => x.era === 'past');
+  const jobSel = el('select'); jobSel.setAttribute('aria-label', '前世の仕事');
+  [['現代の日本', jobsM], ['昔の日本', jobsP]].forEach(([g, list]) => { const og = el('optgroup'); og.label = g; list.forEach(x => { const op = el('option', '', x.job); op.value = jobKey(x); if (jobKey(x) === f.jobKey) op.selected = true; og.append(op); }); jobSel.append(og); });
+  jobSel.addEventListener('change', () => { f.jobKey = jobSel.value; again(); });
+  const pastOpts = Object.keys(PD.PAST).map(k => { const c = Player.pastCheck(k, j.era, j.job, f.age); return [k, PD.PAST[k].n + (c.ok ? '' : '　（選べない：' + c.reason + '）'), !c.ok]; });
+  const rnd = btn('名前をランダムに', () => { const r = a => a[Math.floor(Math.random() * a.length)]; f.surname = r(O.surnames); f.given = r(O.given[f.sex]); again(); });
+  const grid = el('div', 'fgrid',
+    fld('姓', text('surname', '姓')), fld('名', text('given', '名'), '呼び名になります'),
+    fld('性別', sel([['男', '男'], ['女', '女']], f.sex, v => { f.sex = v; f.given = O.given[v][Math.floor(Math.random() * O.given[v].length)]; }, '性別')),
+    fld('年齢（' + Player.T.ageMin + '〜' + Player.T.ageMax + '歳）', ageIn, 'この仕事のふつうの年齢：' + j.ar[0] + '〜' + j.ar[1] + '歳'),
+    fld('前世の仕事', jobSel, j.era === 'past' ? '昔の日本の人' : '現代の日本の人'),
+    fld('過去', sel(pastOpts, f.past, v => { f.past = v; }, '過去'), (PD.PAST[f.past] || {}).left ? '消えないもの：' + PD.PAST[f.past].left : ''),
+    fld('気質', sel([['omakase', 'おまかせ（選んだ道から育つ）']].concat(O.s1.map(x => [x.key, x.name + '（' + x.feel + '）'])), f.s1, v => { f.s1 = v; }, '気質')),
+    fld('信条', sel([['omakase', 'おまかせ（選んだ道から育つ）']].concat(O.s2.map(x => [x.key, x.name + '：' + x.motto])), f.s2, v => { f.s2 = v; }, '信条')),
+    fld('授かった力', sel(O.gifts.map(x => [x.id, x.name + '（' + x.desc + '）']), f.cheat, v => { f.cheat = v; }, '授かった力')));
+  const lookName = res.ok ? res.cand.look : (j.looks[0]);
+  const prev = el('div', 'formPrev', el('div', 'sp', spriteCv(lookName, 4)), el('div', 'grow',
+    el('div', 'nm', (f.surname ? f.surname + ' ' : '') + f.given), el('div', 'small muted', f.sex + '　' + f.age + '歳　前世：' + j.job + '（' + lookName + '）'),
+    el('div', 'small muted', '話し方・一人称・出身は、作ったあとに「人」の欄に出ます（人物からエンジンと同じ規則で決まります）。')));
+  const go = btn('この人になる', () => { const r = Player.custom(formCond()); if (!r.ok) { say(r.error); return; } start(r.cand); }, 'primary', !res.ok);
+  return el('div', 'box lifeBox', el('h2', '', '自分で作る'), el('p', 'lead', '気質・信条を「おまかせ」にすると、最初の3つの分かれ目で選んだ道から決まります（それまで心の声は出ません）。前世の仕事と食い違う過去は選べません。'),
+    grid, el('div', 'actions', rnd), prev, el('div', 'formErr', res.ok ? '' : res.error), el('div', 'actions', go));
+}
+
+// 本編・左：場面の絵（固定）と、エピソードを読む欄（この中だけスクロール）
+function renderMain(main) {
+  const W = S.W, c = W.cur, last = W.log[W.log.length - 1];
+  main.classList.toggle('over', !!W.over);
+  if (W.over) put(main, renderEnding());   // 人生が終わったら、いちばん上に終わりの画面
+  const src = c || last;
+  if (!src) { put(main, el('div', 'box', '出来事はまだ起きていない。', btn('最初のエピソードへ', doNextEp, 'primary'))); return; }
+  const h = hdrOf(src);
+  put(main, el('div', 'box sceneBox', sceneCv({ place: src.place, time: src.time, bg: src.bg, ids: h.ids })));
+  const b = el('div', 'box'); b.id = 'storyBox';
+  put(b, evHeader(src), el('div', 'lines', linesWith(src.lines, src.choices)));
+  if (c && c.choice) put(b, renderChoice(c.choice, c));
+  else if (c) put(b, el('div', 'actions', btn(c.lines.length ? '次へ' : 'はじめる', doAdvance, 'primary'), el('span', 'small muted', '読んだ文は残ります。分かれ目では、あなたが道を選びます')));
+  else put(b, renderWrapUp(last));
+  put(main, b);
+}
+// 選ばなかった道を、灰色で残す
+function linesWith(lines, choices) {
+  const out = []; let n = 0;
+  lines.forEach(l => {
+    out.push(...lineEls(l));
+    if (l.k === 'c') {
+      const cc = choices && choices[n++], rest = cc ? cc.opts.filter(o => o.key !== cc.picked) : [];
+      if (rest.length) out.push(el('div', 'skipped', el('span', '', '選ばなかった道：'), rest.map(o => el('span', 'skip', o.label + (o.chance != null ? '（' + Player.chanceWord(o.chance) + '）' : '')))));
+    }
+  });
+  return out;
+}
+// 分かれ目：あなたは、どうする？
+function renderChoice(ch, c) {
+  const W = S.W, P = W.player, H = Player.hints(W), hid = Player.hidden(W), trig = !!ch.trig, box = el('div', 'choiceBox');
+  put(box, trig ? el('div', 'trigBanner', '◇ あの日のことがよみがえった。体が勝手に動こうとしている。別の道を選ぶなら、踏みとどまる（心 −1）。') : null,
+    el('h2', '', 'あなたは、どうする？'), el('div', 'qline', ch.q),
+    hid.any ? el('div', 'hint', 'あなたがどんな人なのかは、まだ決まっていません。選んだ道が、あなたをつくります。') : null);
+  const opts = el('div', 'opts');
+  ch.opts.forEach(o => {
+    const hn = H[o.key], hold = trig && !hn.instinct, lock = hold && P.kokoro < 1, marks = [];
+    if (hn.body && hn.creed) marks.push(el('span', 'mark both', '体も信条も、これ'));
+    else { if (hn.body) marks.push(el('span', 'mark first', '体が先に動きそう')); if (hn.creed) marks.push(el('span', 'mark then', 'あなたの信条ならこれ')); }
+    if (trig && hn.instinct) marks.push(el('span', 'mark trig', '体が勝手に動く道'));
+    if (hold) marks.push(el('span', 'mark hold', lock ? '踏みとどまれない（心が足りない）' : '踏みとどまる（心 −1）'));
+    const cls = o.chance == null ? '' : o.chance >= 70 ? 'good' : o.chance >= 40 ? 'mid' : 'bad';
+    const main = el('button', 'optMain' + (hold ? ' hold' : ''),
+      el('span', 'oh', el('b', '', o.label), el('span', 'chip', D.APPROACH[o.appr] || '')),
+      marks.length ? el('span', 'marks', marks) : null,
+      o.sayText ? el('span', 'say', '「' + o.sayText + '」') : null,
+      o.chance != null ? el('span', 'cw ' + cls, Player.chanceWord(o.chance)) : el('span', 'small muted', '判定のない道'));
+    main.type = 'button'; main.disabled = lock;
+    main.addEventListener('click', () => doChoose(o.key, hold));
+    const dk = W.turn + ':' + ch.id + ':' + o.key, open = S.detail.has(dk), wrapO = el('div', 'optWrap', main);
+    if (o.chance != null) {
+      const d = btn(open ? '閉じる' : 'くわしく', () => { if (S.detail.has(dk)) S.detail.delete(dk); else S.detail.add(dk); render(); }, 'detailBtn'); d.setAttribute('aria-expanded', open ? 'true' : 'false');
+      put(wrapO, d, open ? el('div', 'detailBox', chanceRow(o.chance, o.parts)) : null);
+    }
+    put(opts, wrapO);
+  });
+  put(box, opts);
+  if (ch.card) put(box, el('div', 'cardMsg', ch.cardText, el('span', 'muted', '　絆 ' + sgn(ch.bondDelta))));
+  if (ch.voice) put(box, el('div', 'cardMsg voice', el('b', '', '神の声：'), ch.voice));
+  put(box, el('div', 'small muted', '選ぶと、その道を行きます。祈りは下の帯から（1つの分かれ目で1回まで）。'));
+  return box;
+}
+// 結び：余韻・得たもの・張った糸と引いた糸
+function renderWrapUp(ev) {
+  const box = el('div', 'wrapUp');
+  put(box, el('h2', '', '結び'), el('div', '', el('span', 'muted', '余韻：'), ev.payoff));
+  ev.choices.forEach(c => {
+    const pk = (S.W.player.picks || []).find(p => p.turn === ev.turn && p.id === c.id), rest = c.opts.filter(o => o.key !== c.picked);
+    put(box, el('div', 'small', el('span', 'muted', '「' + c.q + '」：'), c.label + '　', pk && pk.held ? el('span', 'chip warnc', '踏みとどまった') : null, pk && pk.like > 0 ? el('span', 'chip', 'らしい') : pk && pk.like < 0 ? el('span', 'chip warnc', 'らしくない') : null, c.chance != null ? el('span', 'outcome ' + c.outcome, OUT_NAME[c.outcome]) : null, c.chance != null ? '成功率' + c.chance + '%' : '', c.card ? '　祈り（加護）' : ''),
+      rest.length ? el('div', 'skipped', el('span', '', '選ばなかった道：'), rest.map(o => el('span', 'skip', o.label))) : null);
+  });
+  const tg = sumTags(ev.effects);
+  put(box, el('h3', '', '得たもの・変わったこと'), tg.length ? el('div', 'tags', tg) : el('div', 'small muted', '目に見える変化はなかった。'));
+  if (ev.opened.length || ev.closed.length) put(box, el('h3', '', '糸'), threadTags(ev));
+  if (!S.W.over) put(box, el('div', 'actions', isSlow() ? btn('自由な時間へ', doLeaveWrap, 'primary') : btn('次のエピソードへ', doNextEp, 'primary')));
+  return box;
+}
+function threadTags(ev) {
+  const out = [], W = S.W, small = ev.moment || ev.turn >= 1000;
+  ev.opened.forEach(o => out.push(el('span', 'tag thread', '張った糸　' + threadLabel(o.id) + '：' + nickOf(o.who) + '（' + (small ? (ev.mdText || '') : '第' + ev.turn + '話') + '）' + (o.memo ? '「' + o.memo + '」' : ''))));
+  ev.closed.forEach(o => {
+    const t = W.threads.find(x => x.id === o.id && x.who === o.who && x.closedBy === ev.epId), when = t && t.openDate ? t.openDate : '第' + o.opened + '話';
+    out.push(el('span', 'tag thread', '引いた糸　' + threadLabel(o.id) + '：' + nickOf(o.who) + '（' + when + '）' + (o.memo ? '「' + o.memo + '」' : '') + '→ ' + (small ? (ev.mdText || '') + '「' + ev.title + '」' : '第' + ev.turn + '話「' + ev.title + '」') + 'で'));
+  });
+  return el('div', 'tags', out);
+}
+function renderEnding() {
+  const W = S.W, h = hero(), o = W.over, info = Story.person(W, W.heroId), alive = Object.keys(W.people).filter(id => id !== W.heroId && W.people[id].alive).length, pf = Player.profile(W);
+  const cell = (n, l) => el('div', '', el('b', '', n), l);
+  const order = ['lover', 'companion', 'mentor', 'nemesis'];
+  const folk = info.relations.filter(r => r.alive && order.includes(r.type)).sort((a, b) => order.indexOf(a.type) - order.indexOf(b.type) || b.trust - a.trust);
+  const gr = Player.growth(W), chips = arr => arr.length ? arr.map(x => el('span', 'chip lean', x.name + ' ' + x.v)) : el('span', 'muted small', '（積み上がったものはなかった）');
+  return el('div', 'box ending', el('div', 'endBig', END_BIG[o.ending] || o.ending), el('div', 'endHero', el('div', 'sp', spriteCv(h.look, 5))),
+    el('div', 'endText', o.text),
+    folk.length ? el('h3', '', '最後まで残った人たち') : null,
+    folk.length ? el('div', 'endFolk', folk.map(r => el('div', 'folk' + (r.type === 'nemesis' ? ' foe' : ''), el('div', 'sp', spriteCv(r.look || h.look, 3, r.build)), el('b', '', r.name), el('span', 'small muted', r.typeName)))) : el('div', 'small muted', '最後まで残った関係者はいなかった。'),
+    el('h3', '', 'あなたが生きた人柄'),
+    pf.hidden ? el('div', '', '人柄が決まる前に、人生が終わった。') : el('div', 'endText', pf.text),
+    pf.hidden ? null : el('div', 'kv', el('span', '', '気質'), el('span', '', pf.s1Name), el('span', '', '信条'), el('span', '', pf.s2Name + (pf.changed ? '（変わった）' : '')),
+      el('span', '', '信条の変化'), el('span', '', pf.history.length ? pf.history.map((x, i) => ((W.player.s2History[i] || {}).date || '第' + x.turn + '話') + '　' + x.from + ' → ' + x.to).join('／') : '変わらなかった')),
+    el('div', 'growRow', el('span', 'muted small', '育った気質　'), chips(gr.s1)), el('div', 'growRow', el('span', 'muted small', '育った信条　'), chips(gr.s2)),
+    el('div', 'sumGrid', cell(pf.picks, '選んだ道'), cell(pf.rashii, 'らしい道'), cell(pf.rashikunai, 'らしくない道'), cell(pf.held, '踏みとどまった'), cell(pf.prayed, '祈った')),
+    isSlow() ? el('div', 'sumGrid', cell(W.player.clock.day + '日', '旅の日数'), cell(W.town.stats.moments, '小さな場面'), cell(W.town.stats.talks, '会話'), cell(W.town.stats.rumorEps + W.town.stats.questEps, '噂・依頼から')) : null,
+    el('div', 'sumGrid', cell(W.log.length, 'エピソード'), cell(Math.floor(h.age) + '歳', '最期の年齢'), cell(h.items.length, '持ち物の種類'), cell(h.skills.length, 'スキル'), cell(Object.keys(W.people).length - 1, '関わった人'), cell(alive, 'うち存命'), cell(h.stats.名声, '名声')),
+    el('div', 'actions', btn('新しい人生', newLife, 'gold')));
+}
+
+// 下の帯：心・祈り・らしさ
+function renderHand(hand) {
+  const W = S.W, h = hero(), c = W.cur, ch = c && c.choice, P = W.player, T = Player.T, TN = D.TUNE;
+  const box = el('div', 'box');
+  const kd = el('span', 'kdots'); kd.setAttribute('aria-hidden', 'true'); for (let i = 0; i < Math.max(P.kokoro, T.kokoro0); i++) put(kd, el('i', i < P.kokoro ? '' : 'off'));
+  const orbs = el('span', ''); for (let i = 0; i < T.prayers0; i++) put(orbs, el('span', 'orb' + (i < P.prayers ? '' : ' off')));
+  const hearts = el('span', ''); for (let i = 0; i < TN.maxLife; i++) put(hearts, heartSvg(i < h.stats.命));
+  const hid = Player.hidden(W);
+  put(box, el('div', 'band',
+    el('div', 'g', el('span', 'muted', '心'), kd, el('span', 'small', P.kokoro), el('span', 'small muted', '（踏みとどまると −1）')),
+    el('div', 'g', el('span', 'muted', '祈り'), orbs, el('span', 'small', '残り' + P.prayers + '回')),
+    el('div', 'g', el('span', 'muted', 'らしさ'), el('span', 'small', hid.any ? 'まだ決まらない' : 'らしい ' + P.trueToSelf + '・らしくない ' + P.againstSelf)),
+    el('div', 'g', el('span', 'muted', '絆'), (() => { const b = bar(h.stats.絆); b.classList.add('bond'); return b; })(), el('span', 'small', h.stats.絆)),
+    el('div', 'g', el('span', 'muted', '命'), hearts)));
+  const why = W.over ? 'この人生は終わった' : !ch ? '祈りは分かれ目で使う' : P.prayers < 1 ? '祈りは、もう残っていない' : ch.prayed ? 'この分かれ目では、もう祈った' : '';
+  const row = el('div', 'prayRow', btn(S.praying && !why ? '祈るのをやめる' : '祈る', () => { if (why) { say(why); render(); return; } S.praying = !S.praying; render(); }, S.praying && !why ? 'gold' : '', !!W.over));
+  if (S.praying && !why) put(row, btn('加護を願う', () => doPray('blessing'), 'primary'), btn('声を聞く', () => doPray('voice'), 'primary'),
+    el('span', 'small muted', '加護＝命を一度守り、判定のある道なら成功率が上がる　声＝神が助言をひとこと'));
+  else put(row, el('span', 'small muted', why || '分かれ目で、加護を願うか、神の声を聞けます（残り' + P.prayers + '回）'));
+  put(box, row); put(hand, box);
+}
+
+// 右
+function renderSide(side) {
+  const tabs = el('div', 'tabs');
+  TAB_NAME.forEach(([k, n]) => { const b = btn(n, () => { S.tab = k; if (k !== 'rel') S.relFocus = null; render(); }, S.tab === k ? 'on' : ''); put(tabs, b); });
+  const box = el('div', 'box');
+  const info = Story.person(S.W, S.W.heroId);
+  if (S.tab === 'person') put(box, personView(S.W.heroId, info, true));
+  else if (S.tab === 'log') put(box, threadsView(), logView(info.life, 'hero'));
+  else if (S.tab === 'rel') put(box, S.relFocus ? relDetail(S.relFocus, info) : relList(info));
+  else if (S.tab === 'items') put(box, itemsView(info));
+  else put(box, skillsView(info));
+  put(side, tabs, box);
+}
+
+function personView(id, info, isHero, rel) {
+  const P = info.person, pm = info.persona, hid = isHero ? Player.hidden(S.W) : { s1: false, s2: false, any: false };
+  const known = isHero || (rel && rel.known), wrap = el('div');
+  const head = el('div', 'person', el('div', 'sp', spriteCv(P.look, 4, P.build)), el('div', 'info',
+    el('h2', '', P.name + (P.alive ? '' : '（故人）')),
+    el('div', 'small muted', P.sex + '　' + Math.floor(P.age) + '歳　' + P.job + (P.prevJob ? '　前世：' + P.prevJob : '')),
+    el('div', '', '呼び名：' + (hid.any ? '？（まだ決まらない）' : pm.title))));
+  put(wrap, head);
+  const kv = el('div', 'kv');
+  put(kv, el('span', '', '気質'), el('span', hid.s1 ? 'muted' : '', hid.s1 ? '？（選んだ道から決まる）' : pm.s1.name + '（' + pm.s1.feel + '）'), el('span', '', '信条'), el('span', hid.s2 ? 'muted' : '', hid.s2 ? '？（選んだ道から決まる）' : pm.s2.name + '：「' + pm.s2.motto + '」'));
+  put(kv, el('span', '', '過去'), el('span', known ? '' : 'muted', known ? pm.past.event + '（' + pm.past.left + '）' : 'まだ知らない'));
+  if (known) {
+    put(kv, el('span', '', '望み'), el('span', '', pm.goal + '（' + pm.wishName + '）'));
+    if (isHero) { put(kv, el('span', '', '進み具合'), el('span', '', bar(P.goal.progress), el('span', 'small muted', P.goal.progress + '%'))); }
+    put(kv, el('span', '', '口癖'), el('span', hid.any ? 'muted' : '', hid.any ? '？' : '「' + pm.kuse[0] + '」「' + pm.kuse[1] + '」'));
+    const V = globalThis.PersonaVoice && P.voice && globalThis.PersonaVoice.VOICES[P.voice];
+    if (V) put(kv, el('span', '', '話し方'), el('span', '', 'タイプ' + V.no + '　' + V.n, el('span', 'small muted', '（' + V.hint + '）')), el('span', '', '一人称'), el('span', '', P.me || V.me, el('span', 'small muted', (m => m ? '（' + m.note + '）' : P.me && P.me === P.nick ? '（自分を名前で呼ぶ）' : '')(globalThis.PersonaVoice.ME[P.me || V.me]))),
+      el('span', '', '出身'), el('span', '', globalThis.PersonaVoice.homeName(P) || '—', el('span', 'small muted', V.home ? '（その土地の言葉で話す）' : '')),
+      el('span', '', 'この型の人'), el('span', 'small', globalThis.PersonaVoice.WHO[P.voice] || ''),
+      el('span', '', '決め語尾'), el('span', '', V.tails && V.tails.length ? V.tails.map(t => '〜' + t).join('・') + '（' + Math.round((V.tailRate || 0) * 100) + '％の確率）' : 'なし'));
+    put(kv, el('span', '', '引き金'), el('span', '', pm.trigger), el('span', '', '避けるもの'), el('span', '', pm.avoid));
+  }
+  put(wrap, kv);
+  if (isHero) {
+    const gr = Player.growth(S.W), W = S.W.player, chips = (arr, none) => arr.length ? arr.map(x => el('span', 'chip lean', x.name + ' ' + x.v)) : el('span', 'muted small', none);
+    put(wrap, el('h3', '', '育っている人柄'), el('div', 'growRow', el('span', 'muted small', '気質　'), chips(gr.s1, 'まだ積み上がっていない')), el('div', 'growRow', el('span', 'muted small', '信条　'), chips(gr.s2, 'まだ積み上がっていない')),
+      el('div', 'small muted', hid.any ? 'らしさは、人柄が決まってから数えます。' : 'らしい ' + W.trueToSelf + '・らしくない ' + W.againstSelf + '・踏みとどまった ' + W.held + '・祈った ' + W.prayed + '。信条は、別の信条が8以上多く積み上がると変わります。'),
+      W.s2History.length ? el('div', 'small', '信条が変わった：' + W.s2History.map(x => (x.date || '第' + x.turn + '話') + '　' + Player.s2Name(x.from) + ' → ' + Player.s2Name(x.to)).join('／')) : null);
+  }
+  const keys = isHero ? ['力', '技', '心', '名声', '金', '命', '絆'] : ['力', '技', '心'];
+  put(wrap, el('div', 'stats', keys.filter(k => P.stats[k] != null).map(k => el('div', '', el('b', '', P.stats[k]), k))));
+  if (P.flags && P.flags.length) put(wrap, el('div', '', P.flags.map(f => el('span', 'chip kind-crisis', f))));
+  if (isHero) put(wrap, el('h3', '', 'いま立っている印'), el('div', '', info.marks && info.marks.length ? info.marks.map(m => el('span', 'chip', m.name)) : el('span', 'muted small', 'まだ何も立っていない')));
+  if (!isHero) put(wrap, el('h3', '', P.nick + 'が関わったエピソード'), logView(info.life, 'p' + id));
+  return wrap;
+}
+
+// 糸の一覧（恩：ハル（第4話）→ 第5話で仲間に）
+function threadsView() {
+  const W = S.W, wrap = el('div', 'threads');
+  if (!W.threads.length) return null;
+  const titleOf = turn => { const e = W.log.find(x => x.turn === turn); return e ? '第' + turn + '話「' + e.title + '」' : '第' + turn + '話'; };
+  put(wrap, el('h3', '', '糸（張った・引いた）'));
+  W.threads.forEach(t => put(wrap, el('div', 'threadRow' + (t.closed ? '' : ' open'), el('b', '', threadLabel(t.id)), '：' + nickOf(t.who) + '（' + threadWhen(t.turn, t.openDate) + '）', t.memo ? el('span', 'memo', '　「' + t.memo + '」') : null, ' → ' + (t.closed ? (t.closedDate ? t.closedDate + 'の小さな場面' : titleOf(t.closed)) + 'で引いた' : 'まだ引かれていない'))));
+  return wrap;
+}
+function logView(life, ctx) {
+  const wrap = el('div'), list = life.slice(); if (S.newest) list.reverse();
+  if (ctx === 'hero') put(wrap, el('div', 'toolbar', btn(S.newest ? '新しい順（押すと古い順）' : '古い順（押すと新しい順）', () => { S.newest = !S.newest; render(); }), el('span', 'small muted', list.length + '話')));
+  if (!list.length) put(wrap, el('div', 'muted', 'まだエピソードがない'));
+  const tl = el('div', 'tl');
+  let lastYear = null;
+  list.forEach(ev => {
+    if (ev.year != null && ev.year !== lastYear) { put(tl, el('div', 'yearHead', ev.year + '年目')); lastYear = ev.year; }
+    const key = ctx + ':' + ev.id, open = S.open.has(key), box = el('div', 'ev');
+    const outs = ev.choices.filter(c => c.chance != null).map(c => OUT_NAME[c.outcome]).join('・');
+    const th = ev.opened.map(o => '糸を張る：' + threadLabel(o.id)).concat(ev.closed.map(o => '糸を引く：' + threadLabel(o.id))).join('　');
+    const head = el('button', '', el('span', '', '第' + ev.turn + '話　' + (ev.season ? ev.season + (ev.month ? '（' + ev.month + '月）' : '') + '　' : '') + ev.age + '歳　' + placeName(ev.place) + '　「' + ev.title + '」'),
+      el('span', 'sum', typeName(ev.type) + (outs ? '　' + outs : '') + (th ? '　' + th : '')));
+    head.type = 'button'; head.setAttribute('aria-expanded', open ? 'true' : 'false');
+    head.addEventListener('click', () => { if (S.open.has(key)) S.open.delete(key); else S.open.add(key); render(); });
+    put(box, head);
+    if (open) {
+      const d = el('div', 'detail');
+      put(d, el('p', 'small muted', ev.year + '年目・' + ev.when + '　／　' + (ev.cast.length ? '関わった人：' + ev.cast.map(c => nickOf(c.id) + '（' + c.role + '）').join('、') : '関わった人：なし') + '　／　' + (TIME_NAME[ev.time0 || ev.time] || '') + (ev.time0 && ev.time0 !== ev.time ? '→' + (TIME_NAME[ev.time] || '') : '')),
+        el('p', 'stake', '懸かっているもの：' + ev.stake),
+        el('div', 'lines', linesWith(ev.lines, ev.choices)),
+        ev.choices.map(c => el('p', 'small', el('span', 'muted', '分かれ目「' + c.q + '」　選んだ道：'), c.label, c.chance != null ? el('span', '', '　成功率' + c.chance + '%→', el('span', 'outcome ' + c.outcome, OUT_NAME[c.outcome])) : null, c.card ? el('span', 'muted', '　祈り（加護）') : null)),
+        threadTags(ev), el('div', 'tags', sumTags(ev.effects)), el('p', 'small muted', '余韻：' + ev.payoff));
+      put(box, d);
+    }
+    put(tl, box);
+  });
+  put(wrap, tl);
+  return wrap;
+}
+
+// 人物相関図
+const REL_ORDER = ['lover', 'companion', 'mentor', 'patron', 'grateful', 'acquaintance', 'rival', 'enemy', 'nemesis', 'parted'];
+function relMap(info) {
+  const rs = info.relations.slice().sort((a, b) => REL_ORDER.indexOf(a.type) - REL_ORDER.indexOf(b.type) || b.trust - a.trust), n = rs.length, h = hero();
+  const wrap = el('div', 'relMap'); wrap.setAttribute('role', 'group'); wrap.setAttribute('aria-label', '人物相関図');
+  const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('aria-hidden', 'true');
+  const pos = rs.map((r, i) => { const a = -Math.PI / 2 + i * 2 * Math.PI / n, big = n > 8 && i % 2 === 1 ? 0.7 : 1; return [50 + 37 * big * Math.cos(a), 50 + 38 * big * Math.sin(a)]; });
+  rs.forEach((r, i) => {
+    const foe = r.type === 'enemy' || r.type === 'nemesis' || r.trust < 0, gone = !r.alive || r.type === 'parted', t = r.trust, ln = document.createElementNS(NS, 'line');
+    ln.setAttribute('x1', 50); ln.setAttribute('y1', 50); ln.setAttribute('x2', pos[i][0]); ln.setAttribute('y2', pos[i][1]);
+    const wd = foe ? 1.5 + Math.min(100, Math.abs(t)) / 100 * 3 : 1.5 + Math.max(0, t) / 100 * 5, op = gone ? 0.25 : foe ? 0.9 : 0.35 + Math.max(0, t) / 100 * 0.65;
+    ln.setAttribute('style', 'stroke:' + (foe ? 'var(--bad)' : r.type === 'lover' ? '#e8a0d0' : 'var(--good2)') + ';stroke-width:' + wd.toFixed(1) + 'px;opacity:' + op.toFixed(2) + ';vector-effect:non-scaling-stroke;' + (gone ? 'stroke-dasharray:5 5;' : ''));
+    svg.append(ln);
+  });
+  wrap.append(svg);
+  const sc = (window.innerWidth < 640 && n > 7) || n > 14 ? 1 : 2;
+  const node = (cls, x, y, look, build, name, label, fn) => { const b = el('button', 'rnode ' + cls, el('span', 'sp', spriteCv(look, sc, build)), el('span', 'nm', name)); b.type = 'button'; b.style.left = x + '%'; b.style.top = y + '%'; b.setAttribute('aria-label', label); b.title = label; b.addEventListener('click', fn); return b; };
+  put(wrap, node('hero', 50, 50, h.look, h.build, h.nick, h.nick + '（主人公）の詳細へ', () => { S.tab = 'person'; S.relFocus = null; render(); }));
+  rs.forEach((r, i) => {
+    const P = pAny(r.id), cls = (r.alive ? '' : 'dead ') + (r.type === 'enemy' || r.type === 'nemesis' ? 'foe' : r.type === 'lover' ? 'love' : r.type === 'companion' ? 'ally' : '');
+    put(wrap, node(cls, pos[i][0], pos[i][1], r.look || (P && P.look) || h.look, r.build, r.name, r.name + '（' + r.typeName + '・信頼' + r.trust + (r.alive ? '' : '・故人') + '）の詳細へ', () => { S.relFocus = r.id; render(); }));
+  });
+  return el('div', '', wrap, el('div', 'legend', '線：太く明るい＝信頼が高い　赤＝敵対・仇　点線＝亡くなった人・別れた人'));
+}
+function relList(info) {
+  const wrap = el('div');
+  if (!info.relations.length) return el('div', 'muted', 'まだ関係のある人はいない');
+  const rows = el('div', 'rows');
+  info.relations.forEach(r => {
+    const P = pAny(r.id);
+    const b = el('button', 'row' + (r.alive ? '' : ' dead'),
+      el('div', 'sp', spriteCv(r.look || P.look, 3, r.build)),
+      el('div', 'bd', el('div', '', el('b', '', r.name), el('span', 'chip', r.typeName), r.job ? el('span', 'small muted', r.job) : null, r.alive ? (r.missing ? el('span', 'chip kind-crisis', '行方知れず') : r.away ? el('span', 'chip', '旅に出ている') : null) : el('span', 'chip kind-crisis', 'この世を去った')),
+        trustBar(r.trust), el('div', 'small muted', '信頼 ' + r.trust + '　出会い：第' + r.since + '話' + (r.sinceTitle ? '「' + r.sinceTitle + '」' : '')), isSlow() ? allyExtra(r.id) : null));
+    b.type = 'button'; b.addEventListener('click', () => { S.relFocus = r.id; render(); });
+    put(rows, b);
+  });
+  put(wrap, relMap(info), rows); return wrap;
+}
+function relDetail(id, info) {
+  const r = info.relations.find(x => x.id === id), wrap = el('div');
+  put(wrap, el('div', 'toolbar', btn('戻る', () => { S.relFocus = null; render(); })));
+  if (!r) { S.relFocus = null; return wrap; }
+  put(wrap, el('div', 'small', el('span', 'chip', r.typeName), '信頼 ' + r.trust), trustBar(r.trust), personView(id, Story.person(S.W, id), false, r));
+  return wrap;
+}
+
+function itemsView(info) {
+  const wrap = el('div'), W = S.W, cats = [];
+  info.items.forEach(i => { if (!cats.includes(i.category)) cats.push(i.category); });
+  if (!info.items.length) put(wrap, el('div', 'muted', '持ち物はまだない'));
+  cats.forEach(c => {
+    put(wrap, el('div', 'catHead', c));
+    info.items.filter(i => i.category === c).forEach(i => {
+      put(wrap, el('div', 'item', el('b', '', i.name + (i.n > 1 ? ' ×' + i.n : '')),
+        el('div', 'small muted', i.look), el('div', 'small', i.effect), el('div', 'small muted', '第' + i.turn + '話' + (i.fromTitle ? '「' + i.fromTitle + '」' : '') + 'で手に入れた')));
+    });
+  });
+  const gone = [];
+  W.log.forEach(ev => (ev.effects || []).forEach(e => { if (e.t === 'item' && e.who === W.heroId && e.n < 0) gone.push({ ev, e }); }));
+  if (gone.length) {
+    put(wrap, el('div', 'catHead', '失った物'));
+    gone.slice().reverse().forEach(({ ev, e }) => put(wrap, el('div', 'item gone', el('b', '', itemName(e.no)), el('div', 'small muted', '第' + ev.turn + '話「' + ev.title + '」で失った'))));
+  }
+  return wrap;
+}
+function skillsView(info) {
+  const wrap = el('div'), cats = [];
+  info.skills.forEach(s => { if (!cats.includes(s.category)) cats.push(s.category); });
+  if (!info.skills.length) put(wrap, el('div', 'muted', 'スキルはまだない'));
+  cats.forEach(c => {
+    put(wrap, el('div', 'catHead', c));
+    info.skills.filter(s => s.category === c).forEach(s => {
+      const pips = el('span', 'pips'); for (let i = 1; i <= 5; i++) put(pips, el('i', i <= s.lv ? 'on' : ''));
+      put(wrap, el('div', 'item', el('b', '', s.name), el('span', 'small', ' Lv' + s.lv), pips, el('div', 'small', s.desc), el('div', 'small muted', '第' + s.turn + '話' + (s.fromTitle ? '「' + s.fromTitle + '」' : '') + 'で覚えた')));
+    });
+  });
+  return wrap;
+}
+
+// ---------- ゆっくり続ける版の画面 ----------
+const SLOT_SHORT = ['朝', '昼', '夕', '夜'];
+function hubScene(view, ids) { return sceneCv({ place: ({ home: 'tavern' })[view.hub] || view.hub, bg: view.bg, time: view.timeEng, ids }); }
+function renderRecap() {
+  const r = Town.recap(S.W), box = el('div', 'box recapBox');
+  put(box, el('h2', '', '前回までのあらすじ'));
+  put(box, r.eps.length ? el('ul', '', r.eps.map(t => el('li', '', t))) : el('p', 'muted', 'まだ、エピソードは終わっていない。'));
+  put(box, el('div', '', el('b', '', 'いま：'), r.now + '（' + r.age + '歳・' + r.gold + '金）'));
+  put(box, el('div', '', el('b', '', '仲間・知人：'), r.allies.length ? r.allies.join('、') : 'まだいない'));
+  put(box, el('div', '', el('b', '', 'まだ引かれていない糸：'), r.threads.length ? '' : 'なし'));
+  if (r.threads.length) put(box, el('ul', '', r.threads.map(t => el('li', '', t))));
+  put(box, el('div', '', el('b', '', '耳にしている噂：'), r.rumors + '件'));
+  put(box, el('div', 'actions', btn('続ける', () => { S.recap = false; render(); }, 'primary')));
+  return el('div', '', el('div', 'box sceneBox', hubScene(Town.view(S.W), Town.view(S.W).allies ? Town.view(S.W).allies.slice(0, 2).map(a => a.id) : [])), box);
+}
+function renderSlowMain(main) {
+  const W = S.W, T = W.town, mode = Town.mode(W);
+  main.classList.toggle('over', mode === 'over');
+  if (S.recap && mode !== 'over') { put(main, renderRecap()); return; }
+  const view = Town.view(W);
+  if (mode === 'over') put(main, renderEnding());
+  if (mode === 'ep' || mode === 'wrap' || mode === 'over') {
+    const c = W.cur, last = W.log[W.log.length - 1];
+    const src = c || (T.wrap && T.wrap.kind === 'moment' ? T.wrap.ev : last);
+    if (!src) return;
+    const h = hdrOf(src);
+    put(main, el('div', 'box sceneBox', sceneCv({ place: src.place, time: src.time, bg: src.bg, ids: h.ids })));
+    const b = el('div', 'box'); b.id = 'storyBox';
+    put(b, evHeader(src), el('div', 'lines', linesWith(src.lines, src.choices)));
+    if (c && c.choice) put(b, renderChoice(c.choice, c));
+    else if (c) put(b, el('div', 'actions', btn(c.lines.length ? '次へ' : 'はじめる', doAdvance, 'primary'), el('span', 'small muted', '読んだ文は残ります。分かれ目では、あなたが道を選びます')));
+    else put(b, renderWrapUp(src));
+    put(main, b);
+    return;
+  }
+  const ids = (view.allies || []).slice(0, 2).map(a => a.id);
+  if (mode === 'talk') ids.splice(0, ids.length, view.talk.pid);
+  put(main, el('div', 'box sceneBox', hubScene(view, ids)));
+  const b = el('div', 'box'); b.id = 'storyBox';
+  if (mode === 'talk') put(b, renderTalk(view));
+  else if (mode === 'shop') put(b, renderShop(view));
+  else put(b, renderHub(view));
+  put(main, b);
+}
+function feedEls(feed) {
+  return (feed || []).map(l => el('p', (l.rumor ? 'rumorLine' : '') + (l.up ? ' upLine' : ''), l.t));
+}
+function renderHub(view) {
+  const W = S.W, h = hero(), box = el('div'), d = view.date;
+  put(box, el('div', 'hubHead', el('span', 'dateBig', d.text), el('span', 'muted small', Math.floor(h.age) + '歳　金 ' + (h.stats.金 || 0) + '　命 ' + h.stats.命)));
+  put(box, el('div', 'placeLine', el('b', '', view.loc.label), el('span', 'muted small', '　' + view.loc.nation + '・' + (view.loc.afield ? '町や村の外' : view.loc.kindName) + (view.loc.atHome ? '・住まい' : '')), btn('地図を見る', () => { S.tab = 'map'; render(); })));
+  put(box, el('div', 'feedBox', view.feed.length ? feedEls(view.feed) : el('p', 'muted', '何をしようか。')));
+  if (Town.mode(W) === 'wish') {
+    put(box, el('div', 'cardMsg', el('b', '', '◇ 望みが叶った。'), '　ここで人生に区切りをつけることも、このまま旅を続けることもできる。'),
+      el('div', 'actions', btn('ここで区切る（成就の結び）', () => doWish('end'), 'gold'), btn('旅を続ける', () => doWish('go'), 'primary')));
+    return box;
+  }
+  const grid = el('div', 'actGrid');
+  view.actions.filter(a => a.id !== 'quest').forEach(a => {
+    const on = S.sub === a.id;
+    const b = el('button', 'actBtn' + (on ? ' on' : ''), el('b', '', a.label), el('span', '', a.ok ? a.hint : a.why));
+    b.type = 'button'; if (!a.ok) b.disabled = true; else b.addEventListener('click', () => onActBtn(a.id));
+    put(grid, b);
+  });
+  put(box, grid);
+  if (S.sub === 'train') {
+    const sb = el('div', 'subBox', el('div', 'small muted', '何を鍛えますか（1時間帯かかります）。続けると伸びます。' + (view.train.length ? '' : '')));
+    view.train.forEach(t => put(sb, el('div', 'rowx', el('b', 'grow', t.label + (t.kind === 'skill' ? '（Lv' + t.cur + '）' : '　' + t.cur)), el('span', 'miniBar', el('i')), el('span', 'small muted', t.prog + ' / ' + t.need), btn('鍛える', () => doAct('train', t.target), 'primary'))));
+    sb.querySelectorAll('.miniBar').forEach((m, i) => { m.firstChild.style.width = Math.min(100, view.train[i].prog / view.train[i].need * 100) + '%'; });
+    put(box, sb);
+  }
+  if (S.sub === 'travel') {
+    const sb = el('div', 'subBox', el('div', 'small muted', 'どこへ出かけますか。道でつながった場所へ、道のりの日数がかかり、道中で何か起きるかもしれません。'), el('div', 'actions', btn('地図で選ぶ', () => { S.tab = 'map'; render(); })));
+    view.travel.forEach(t => put(sb, el('div', 'rowx', el('b', 'grow', t.name + (t.home ? '（住まい）' : '')), el('span', 'small muted', t.nation + '・' + t.kindName), el('span', 'small muted', t.days ? t.days + '日' : 'すぐ'), btn('行く', () => doAct('travel', t.to), 'primary'))));
+    put(box, sb);
+  }
+  if (view.board.length) {
+    put(box, el('div', 'secHead', '依頼の掲示板（登録済みの人だけ）'));
+    view.board.forEach(q => put(box, el('div', 'rumorRow quest', el('div', 'grow', q.text, el('div', 'small muted', (q.loc ? '場所：' + q.loc.name + '（' + q.loc.nation + '）　' : '') + '報酬 ' + q.reward + '金　あと' + q.left + '日')), btn('受ける', () => doQuest(q.id), 'primary'))));
+  }
+  put(box, el('div', 'secHead', '耳にしている噂（' + view.rumors.length + '）'));
+  if (!view.rumors.length) put(box, el('div', 'small muted', 'いまのところ、気になる噂はない。「噂を聞く」で、' + ({ village: '井戸端', town: '酒場や市場', seaport: '桟橋や酒場', camp: '通りがかりの旅人' }[view.hub] || 'まわり') + 'に耳を傾けてみよう。'));
+  view.rumors.forEach(r => put(box, el('div', 'rumorRow' + (r.passed ? ' passed' : ''), el('div', 'grow', r.text + '　', el('span', 'small muted', r.passed ? '（見送り中・あと' + r.left + '日で消える）' : '（あと' + r.left + '日）'), r.loc ? el('div', 'small whereLine', '場所：' + r.loc.name + '（' + r.loc.nation + '）') : null),
+    el('span', 'small', '行ってみる？'), btn('行く', () => doGoRumor(r.id), 'primary'), r.passed ? null : btn('今はやめておく', () => doPassRumor(r.id)))));
+  put(box, el('div', 'secHead', '仲間・知人（' + view.allies.length + '）'));
+  if (!view.allies.length) put(box, el('div', 'small muted', 'まだ話せる相手はいない。出会いは、物語の中にある。'));
+  view.allies.forEach(a => put(box, el('div', 'allyRow', el('div', 'sp', spriteCv(a.look, 3, a.build)), el('div', 'grow', el('div', '', el('b', '', a.nick), el('span', 'chip', a.typeName), el('span', 'chip stageChip', '信頼の段階 ' + (a.stage + 1)), a.job ? el('span', 'small muted', a.job) : null),
+    trustBar(a.trust), el('div', 'relExtra', '信頼 ' + a.trust + (a.confideLeft ? '　打ち明け話が ' + a.confideLeft + ' つ残っている' : '') + (a.exhausted ? (a.talkStage < a.stage ? '　（出会って日が浅く、まだ話せることが少ない）' : '　（話し尽くした）') : ''))),
+    btn(a.exhausted ? '話す（とりとめのない話）' : '話す', () => doTalk(a.id), a.confideLeft ? 'gold' : 'primary'))));
+  return box;
+}
+function renderTalk(view) {
+  const t = view.talk, W = S.W, p = pAny(t.pid), h = hero(), box = el('div', 'talkBox');
+  put(box, el('div', 'hubHead', el('span', 'dateBig', view.date.text), el('span', 'muted small', view.loc.label)));
+  put(box, el('h2', '', p.nick + 'と話す' + (t.confide ? '　（打ち明け話）' : '')));
+  const lines = el('div', 'lines'); t.script.forEach(l => put(lines, lineEls(l)));
+  if (t.picked != null) {
+    const r = t.replies[t.picked];
+    if (r.sayText) put(lines, lineEls({ k: 's', name: h.nick, t: r.sayText })); else put(lines, el('p', 'ln', '（' + r.label + '）'));
+    if (r.after) put(lines, lineEls(r.after));
+  }
+  put(box, lines);
+  if (t.picked != null) {
+    const dlt = t.delta;
+    put(box, el('div', '', el('span', 'deltaChip ' + (dlt > 0 ? 'up' : dlt < 0 ? 'down' : ''), '信頼 ' + (dlt > 0 ? '+' : '') + dlt)), t.stageAfter > t.stageBefore ? el('div', 'cardMsg', '◇ ' + p.nick + 'との距離が縮まった（信頼の段階 ' + (t.stageAfter + 1) + '）') : null);
+  } else if (t.replies.length) {
+    put(box, el('div', 'small muted', 'どう返しますか。'));
+    t.replies.forEach((r, i) => { const b = el('button', 'replyBtn', el('b', '', r.label), r.sayText ? el('span', 'say', '「' + r.sayText + '」') : null); b.type = 'button'; b.addEventListener('click', () => doReply(i)); put(box, b); });
+  }
+  if (t.picked != null || !t.replies.length) put(box, el('div', 'actions', btn('会話を終える', doTalkEnd, 'primary')));
+  return box;
+}
+function renderShop(view) {
+  const s = view.shop, box = el('div'), h = hero();
+  put(box, el('div', 'hubHead', el('span', 'dateBig', view.date.text), el('span', 'muted small', view.loc.name + 'の店　所持金 ' + s.gold + '金')));
+  put(box, el('div', 'feedBox', feedEls(view.feed)));
+  const buy = el('div', '', el('div', 'secHead', '買う'));
+  s.stock.forEach(it => put(buy, el('div', 'shopItem', el('div', 'grow', el('b', '', it.name + (it.have ? '（持っている ' + it.have + '）' : '')), el('div', 'small muted', it.effect)), el('span', 'small', it.price + '金'), btn('買う', () => doBuy(it.no), 'primary', s.gold < it.price))));
+  const sell = el('div', '', el('div', 'secHead', '売る'));
+  if (!s.mine.length) put(sell, el('div', 'small muted', '売れる物を持っていない。'));
+  s.mine.forEach(it => put(sell, el('div', 'shopItem', el('div', 'grow', el('b', '', it.name + (it.n > 1 ? ' ×' + it.n : ''))), el('span', 'small', it.price + '金'), btn('売る', () => doSell(it.no)))));
+  put(box, el('div', 'shopGrid', buy, sell), el('div', 'actions', btn('店を出る', doLeaveShop, 'primary')));
+  return box;
+}
+function renderSlowHand(hand) {
+  renderHand(hand);
+  if (Town.mode(S.W) !== 'ep') { const r = hand.querySelector('.prayRow'); if (r) r.remove(); }
+}
+function renderSlowSide(side) {
+  if (S.tab === 'log') S.tab = 'diary';
+  const tabs = el('div', 'tabs');
+  [['person', '人'], ['diary', '日記'], ['map', '地図'], ['rel', '関係'], ['items', '持ち物'], ['skills', 'スキル']].forEach(([k, n]) => put(tabs, btn(n, () => { S.tab = k; if (k !== 'rel') S.relFocus = null; render(); }, S.tab === k ? 'on' : '')));
+  const box = el('div', 'box'), info = Story.person(S.W, S.W.heroId);
+  if (S.tab === 'person') put(box, personView(S.W.heroId, info, true));
+  else if (S.tab === 'diary') put(box, threadsView(), diaryView());
+  else if (S.tab === 'map') put(box, mapTab());
+  else if (S.tab === 'rel') put(box, S.relFocus ? relDetail(S.relFocus, info) : relList(info));
+  else if (S.tab === 'items') put(box, itemsView(info));
+  else put(box, skillsView(info));
+  put(side, tabs, box);
+}
+// 地図のタブ：世界地図の上に、いまいる場所（赤）・行ったことのある場所（白）・噂のある場所（黄）・行ける場所（緑の輪）。場所を押すと説明と「出かける」
+function mapTab() {
+  const W = S.W, mv = Town.mapView(W), wrap = el('div', 'mapTab'), box = el('div'); box.id = 'mapWrap';
+  const img = el('img'); img.src = '../物語試作/world/world-map.png'; img.alt = '世界地図'; put(box, img);
+  const left = x => ((x + 0.5) / mv.W * 100) + '%', top = y => ((y + 0.5) / mv.H * 100) + '%';
+  const seen = new Set(mv.seen.map(x => x.id)), rum = {}; mv.rumors.forEach(x => { rum[x.id] = x.n; }); const dst = {}; mv.dests.forEach(x => { dst[x.id] = x; });
+  const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('aria-hidden', 'true');
+  const byId = {}; mv.places.forEach(p => { byId[p.id] = p; });
+  for (let i = 1; i < mv.path.length; i++) { const a = byId[mv.path[i - 1]] || mv.seen.find(x => x.id === mv.path[i - 1]), b = byId[mv.path[i]] || mv.seen.find(x => x.id === mv.path[i]); if (!a || !b || (a.x === b.x && a.y === b.y)) continue; const ln = document.createElementNS(NS, 'line'); [['x1', (a.x + 0.5) / mv.W * 100], ['y1', (a.y + 0.5) / mv.H * 100], ['x2', (b.x + 0.5) / mv.W * 100], ['y2', (b.y + 0.5) / mv.H * 100], ['stroke', '#ffffff'], ['stroke-width', 1.2], ['opacity', 0.7], ['vector-effect', 'non-scaling-stroke']].forEach(([k, v]) => ln.setAttribute(k, v)); svg.appendChild(ln); }
+  box.appendChild(svg);
+  const sel = S.mapSel && SWd.byId[S.mapSel] ? S.mapSel : mv.here.id;
+  const pts = mv.places.filter(p => p.hab || seen.has(p.id) || rum[p.id] || dst[p.id] || p.id === mv.here.id);
+  pts.forEach(p => {
+    const cls = 'mapPt' + (p.id === mv.here.id ? ' here' : '') + (dst[p.id] ? ' dest' : '') + (seen.has(p.id) ? ' seen' : '') + (rum[p.id] ? ' rumor' : '') + (p.id === sel ? ' sel' : '') + (p.hab ? '' : ' site');
+    const b = el('button', cls, el('i'));
+    b.type = 'button'; b.style.left = left(p.x); b.style.top = top(p.y); b.setAttribute('aria-label', p.name + (p.id === mv.here.id ? '（いまいる場所）' : '') + (dst[p.id] ? '（出かけられる）' : '') + (rum[p.id] ? '（噂がある）' : '')); b.title = p.name;
+    b.addEventListener('click', () => { S.mapSel = p.id; render(); }); box.appendChild(b);
+  });
+  put(wrap, box);
+  put(wrap, el('div', 'mapLegend small muted', '赤＝いまいる場所　白＝行ったことのある場所　黄＝噂のある場所　緑の輪＝出かけられる場所　（場所を押すと説明が出ます）'));
+  const info = Town.placeInfo(W, sel);
+  if (info) {
+    const ib = el('div', 'mapInfo');
+    put(ib, el('div', 'mapInfoHead', el('b', '', info.name), el('span', 'chip', info.kindName), el('span', 'muted small', info.nation)));
+    const st = []; if (info.here) st.push(info.afieldHere ? 'いまは、この近くの野外にいる' : 'いま、ここにいる'); if (info.home) st.push('住まいがある'); if (info.seen && !info.here) st.push('行ったことがある');
+    if (st.length) put(ib, el('div', 'small', st.join('・')));
+    if (info.orgs.length) put(ib, el('div', 'small', el('span', 'muted', '組織：'), info.orgs.join('、')));
+    const others = info.facilities.filter(f => !info.orgs.includes(f));
+    if (others.length) put(ib, el('div', 'small', el('span', 'muted', '施設：'), others.slice(0, 16).join('、')));
+    if (info.tags.length) put(ib, el('div', 'small', el('span', 'muted', '特徴：'), info.tags.join('、')));
+    if (!info.facilities.length && !info.tags.length) put(ib, el('div', 'small muted', 'これといった施設はない。'));
+    info.rumors.forEach(r => put(ib, el('div', 'small whereLine', (r.quest ? '依頼：' : '噂：') + r.text)));
+    const mode = Town.mode(W);
+    if (info.canGo) put(ib, el('div', 'actions', btn('出かける（' + info.days + '日）', () => { S.sub = null; doAct('travel', info.id); }, 'primary', mode !== 'hub'), mode !== 'hub' ? el('span', 'small muted', '自由な時間のときだけ出かけられます') : null));
+    else if (!info.here) put(ib, el('div', 'small muted', 'ここへは、いまの場所から道で直接つながっていない（人里から人里へ、順に出かけます）。'));
+    put(wrap, ib);
+  }
+  put(wrap, el('div', 'secHead', 'いま出かけられる場所'));
+  mv.dests.forEach(d => put(wrap, el('div', 'rowx', el('b', 'grow', d.name + (d.home ? '（住まい）' : '')), el('span', 'small muted', d.nation + '・' + d.kindName + '・' + d.days + '日'), btn('説明', () => { S.mapSel = d.id; render(); }))));
+  put(wrap, el('div', 'small muted', '行ったことのある場所 ' + mv.seen.length + 'か所'));
+  return wrap;
+}
+function allyExtra(id) {
+  const a = Town.alliesView(S.W).find(x => x.id === id); if (!a) return null;
+  return el('div', 'relExtra', '信頼の段階 ' + (a.stage + 1) + '／4　' + (a.confideLeft ? '打ち明け話が ' + a.confideLeft + ' つ残っている' : '残っている打ち明け話はない') + (a.exhausted ? (a.talkStage < a.stage ? '　出会って日が浅く、まだ話せることが少ない' : '　話し尽くした') : ''));
+}
+function diaryView() {
+  const W = S.W, wrap = el('div'), list = W.town.diary.slice();
+  if (S.newest) list.reverse();
+  put(wrap, el('div', 'toolbar', btn(S.newest ? '新しい順（押すと古い順）' : '古い順（押すと新しい順）', () => { S.newest = !S.newest; render(); }), el('span', 'small muted', list.length + '件')));
+  if (!list.length) put(wrap, el('div', 'muted', 'まだ日記に書くことがない'));
+  let lastDay = null;
+  list.forEach((e, i) => {
+    if (e.day !== lastDay) { put(wrap, el('div', 'diaryDay', Town.dateOf(W, e.day))); lastDay = e.day; }
+    const ev = e.kind === 'ep' ? W.log.find(x => x.turn === e.turn) : null, key = 'dy:' + (e.turn != null ? e.turn : i), open = S.open.has(key);
+    const row = el('div', 'diaryRow ' + (e.kind === 'ep' ? 'ep' : 'small'), el('span', 'sl', SLOT_SHORT[e.slot] || ''), el('div', '', e.where ? el('span', 'whereTag', e.where) : null, e.kind === 'ep' ? el('b', '', e.text) : e.text));
+    if (ev) {
+      const bt = btn(open ? '閉じる' : 'ひらく', () => { if (S.open.has(key)) S.open.delete(key); else S.open.add(key); render(); }, 'detailBtn'); bt.setAttribute('aria-expanded', open ? 'true' : 'false');
+      row.lastChild.append(bt);
+      if (open) put(row.lastChild, el('div', 'dtl', el('div', 'lines', linesWith(ev.lines, ev.choices)), el('div', 'tags', sumTags(ev.effects))));
+    }
+    put(wrap, row);
+  });
+  return wrap;
+}
+
+// ---------- ゆっくり版の操作 ----------
+function afterOp(r, msg) { autosave(); S.toTop = true; S.stick = false; say(msg || ''); render(); }
+function onActBtn(id) {
+  if (id === 'train' || id === 'travel') { S.sub = S.sub === id ? null : id; render(); return; }
+  if (id === 'end') { doRetire(); return; }
+  doAct(id);
+}
+function doAct(id, arg) {
+  if (!isSlow()) return;
+  const r = Town.act(S.W, id, arg);
+  if (!r.ok) { say(r.reason); render(); return; }
+  S.sub = null; S.praying = false;
+  afterOp(r, r.moment ? '小さな場面が始まった。' : '');
+}
+function doGoRumor(rid) { const r = Town.goRumor(S.W, rid); if (!r.ok) { autosave(); say(r.reason); render(); return; } S.sub = null; S.stick = false; afterOp(r, '物語が始まった。'); }
+function doPassRumor(rid) { const r = Town.passRumor(S.W, rid); afterOp(r, r.ok ? '見送った。噂は数日残って、やがて消える。' : r.reason); }
+function doQuest(qid) { const r = Town.takeQuest(S.W, qid); if (!r.ok) { autosave(); say(r.reason); render(); return; } S.sub = null; afterOp(r, '依頼を受けた。'); }
+function doTalk(pid) { const r = Town.act(S.W, 'talk', pid); if (!r.ok) { say(r.reason); render(); return; } afterOp(r, ''); }
+function doReply(i) { const r = Town.talkReply(S.W, i); if (!r.ok) { say(r.reason); render(); return; } afterOp(r, ''); }
+function doTalkEnd() { const r = Town.talkEnd(S.W); if (!r.ok) { say(r.reason || ''); render(); return; } afterOp(r, r.moment ? '小さな場面が始まった。' : ''); }
+function doBuy(no) { const r = Town.buy(S.W, no); S.toTop = false; autosave(); say(r.ok ? r.text : r.reason); S.W.town.feed = [{ k: 't', t: r.ok ? r.text : r.reason }]; render(); }
+function doSell(no) { const r = Town.sell(S.W, no); S.toTop = false; autosave(); say(r.ok ? r.text : r.reason); S.W.town.feed = [{ k: 't', t: r.ok ? r.text : r.reason }]; render(); }
+function doLeaveShop() { const r = Town.leaveShop(S.W); afterOp(r, r.moment ? '小さな場面が始まった。' : ''); }
+function doLeaveWrap() { Town.leaveWrap(S.W); afterOp({}, ''); }
+function doWish(choice) { const r = Town.wish(S.W, choice); afterOp(r, r.ended ? '' : '旅を続ける。'); }
+function doRetire() { if (!confirm('旅を終えて、静かに暮らしますか？\n（この人生は、ここで結びになります）')) return; const r = Town.retire(S.W); if (!r.ok) { say(r.reason); render(); return; } afterOp(r, ''); }
+
+// ---------- 操作 ----------
+function autosave() { saveable(() => localStorage.setItem(keyNow(), isSlow() ? Town.save(S.W) : Player.save(S.W))); }
+function doSave() { if (!S.W) return; const ok = saveable(() => { localStorage.setItem(keyNow(), isSlow() ? Town.save(S.W) : Player.save(S.W)); return true; }); say(ok ? '保存した（' + (isSlow() ? Town.dateParts(S.W).text : '第' + S.W.turn + '話まで') + (S.W.cur ? '・読みかけの途中も' : '') + '）。' : '保存できなかった（この環境では使えないかもしれない）。'); renderTop(); }
+function doLoad() {
+  const s = saveable(() => localStorage.getItem(keyNow())); if (!s) { say('保存されたデータがない。'); return; }
+  try {
+    Town.cleanup();
+    S.W = S.mode === 'slow' ? Town.load(s) : Player.load(s); S.relFocus = null; S.open = new Set(); S.detail = new Set(); S.praying = false; S.tab = 'person'; S.stick = true; S.sub = null;
+    S.recap = isSlow(); say(isSlow() ? '読み込んだ（' + Town.dateParts(S.W).text + '）。' : '読み込んだ（第' + S.W.turn + '話まで）。'); render();
+  }
+  catch (e) { say('読み込めなかった：' + e.message); if (!S.W) render(); }
+}
+function start(c) {
+  Town.cleanup();
+  if (S.mode === 'slow') { S.W = Town.newWorld(S.seed, c, { contentOff: contentOff() }); S.relFocus = null; S.open = new Set(); S.detail = new Set(); S.praying = false; S.tab = 'person'; S.sub = null; S.recap = false; Town.start(S.W); Town.advance(S.W); autosave(); say('転生した。'); S.stick = true; render(); window.scrollTo(0, 0); return; }
+  S.W = Player.newWorld(S.seed, c, { contentOff: contentOff() }); S.relFocus = null; S.open = new Set(); S.detail = new Set(); S.praying = false; S.tab = 'person';
+  Story.next(S.W); Story.advance(S.W); autosave(); say('転生した。'); S.stick = true; render(); window.scrollTo(0, 0);
+}
+function newLife() {
+  if (S.W && !S.W.over && S.W.log.length && !confirm('いまの人生は途中です。やめて、新しい人生を始めますか？\n（自動保存された続きは、「続きから」「読み込み」で戻せます）')) return;
+  Town.cleanup(); S.W = null; S.seed = Math.floor(Math.random() * 100000); S.cands = null; S.praying = false; S.sub = null; S.recap = false; say(''); render(); window.scrollTo(0, 0); }
+function doNextEp() { if (!S.W || S.W.over || S.W.cur) return; Story.next(S.W); Story.advance(S.W); autosave(); say(''); S.stick = true; render(); }
+function doAdvance() { if (!S.W || !S.W.cur || S.W.cur.choice) return; if (isSlow()) Town.advance(S.W); else Story.advance(S.W); autosave(); say(''); S.stick = true; render(); }
+function doChoose(key, hold) {
+  if (!S.W || !S.W.cur || !S.W.cur.choice) return;
+  const r = isSlow() ? Town.choose(S.W, key) : Player.choose(S.W, key);
+  if (!r.ok) { say(r.reason); render(); return; }
+  S.praying = false; autosave(); say(r.changed ? '生き方が変わった。' : r.held ? '踏みとどまった（心 −1）。' : ''); S.stick = true; render();
+}
+function doPray(kind) {
+  const r = isSlow() ? Town.pray(S.W, kind) : Player.pray(S.W, kind);
+  if (!r.ok) { say(r.reason); render(); return; }
+  S.praying = false; autosave(); say(kind === 'blessing' ? '加護を願った。' : '神の声を聞いた。'); render();
+}
+window.addEventListener('resize', fitScenes);
+
+
+// ---------- 起動 ----------
+S.seed = Math.floor(Math.random() * 100000);
+window.__story = S; // 動作確認用
+const q = new URLSearchParams(location.search).get('seed'); if (q && Number.isFinite(+q)) S.seed = +q;
+{ const m = new URLSearchParams(location.search).get('mode'); if (m === 'slow' || m === 'story') S.mode = m; }
+render();
+}
+})();
+</script>
+</body>
+</html>
